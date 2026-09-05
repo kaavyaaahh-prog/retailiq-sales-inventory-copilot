@@ -1,0 +1,7 @@
+{
+  "name": "RetailIQ – Sales & Inventory Copilot",
+  "description": "Intelligent assistant for retail store managers that analyzes sales and inventory data to prioritize restocking, track performance, and guide daily actions.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+
