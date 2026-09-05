@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
 import { Settings, Store, Bell, Shield, Sliders, Database, Save, CheckCircle2, RefreshCcw } from 'lucide-react';
 import { STORE_INFO } from '../data/mockData';
+import { UserProfile, StoreLocationProfile } from '../types';
 
 interface SettingsViewProps {
+  userProfile?: UserProfile;
+  storeProfile?: StoreLocationProfile;
   onShowToast: (title: string, desc?: string, type?: 'success' | 'info') => void;
 }
 
-export const SettingsView: React.FC<SettingsViewProps> = ({ onShowToast }) => {
+export const SettingsView: React.FC<SettingsViewProps> = ({ userProfile, storeProfile, onShowToast }) => {
   const [threshold, setThreshold] = useState('aggressive');
   const [autoApprove, setAutoApprove] = useState(false);
   const [syncInterval, setSyncInterval] = useState('realtime');
@@ -47,9 +50,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onShowToast }) => {
                 Store Branch Name
               </label>
               <input
+                id="settings-store-branch-name"
                 type="text"
                 disabled
-                value={STORE_INFO.name + ' – ' + STORE_INFO.branch}
+                value={storeProfile ? storeProfile.fullBranchDisplayName : STORE_INFO.name + ' – ' + STORE_INFO.branch}
                 className="w-full p-2.5 bg-slate-800/40 border border-slate-700/60 rounded-xl text-slate-300 font-semibold cursor-not-allowed"
               />
             </div>
@@ -58,9 +62,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onShowToast }) => {
                 Store ID & POS Terminal
               </label>
               <input
+                id="settings-store-id-terminal"
                 type="text"
                 disabled
-                value={STORE_INFO.storeId + ' (Terminal A-102)'}
+                value={storeProfile ? storeProfile.posTerminal : STORE_INFO.storeId + ' (Terminal A-102)'}
                 className="w-full p-2.5 bg-slate-800/40 border border-slate-700/60 rounded-xl text-slate-300 font-mono cursor-not-allowed"
               />
             </div>
@@ -71,19 +76,19 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onShowToast }) => {
               <input
                 type="text"
                 disabled
-                value={STORE_INFO.manager.name + ' (' + STORE_INFO.manager.role + ')'}
+                value={userProfile ? `${userProfile.name} (${userProfile.role})` : STORE_INFO.manager.name + ' (' + STORE_INFO.manager.role + ')'}
                 className="w-full p-2.5 bg-slate-800/40 border border-slate-700/60 rounded-xl text-slate-300 font-semibold cursor-not-allowed"
               />
             </div>
             <div>
               <label className="block font-bold uppercase text-slate-400 tracking-wider mb-1">
-                Current Shift
+                Manager Session Identity
               </label>
               <input
                 type="text"
                 disabled
-                value={STORE_INFO.manager.shift}
-                className="w-full p-2.5 bg-slate-800/40 border border-slate-700/60 rounded-xl text-slate-300 font-semibold cursor-not-allowed"
+                value={userProfile?.email ? `${userProfile.email} • Initial: [${userProfile.initials}]` : STORE_INFO.manager.shift}
+                className="w-full p-2.5 bg-slate-800/40 border border-slate-700/60 rounded-xl text-cyan-300 font-mono text-xs cursor-not-allowed"
               />
             </div>
           </div>

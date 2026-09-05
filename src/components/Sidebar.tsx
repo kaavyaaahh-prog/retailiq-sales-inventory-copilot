@@ -14,7 +14,7 @@ import {
   Lightbulb
 } from 'lucide-react';
 import { STORE_INFO } from '../data/mockData';
-import { ActiveSection } from '../types';
+import { ActiveSection, StoreLocationProfile } from '../types';
 
 interface SidebarProps {
   activeSection: ActiveSection;
@@ -22,6 +22,7 @@ interface SidebarProps {
   lowStockCount: number;
   urgentRecsCount: number;
   pendingRestockCount?: number;
+  storeProfile?: StoreLocationProfile;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -30,6 +31,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   lowStockCount,
   urgentRecsCount,
   pendingRestockCount = 1,
+  storeProfile,
 }) => {
   const navItems: {
     id: ActiveSection;
@@ -115,7 +117,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
         {navItems.map((item) => {
           const Icon = item.icon;
-          const isActive = activeSection === item.id;
+          const isActive =
+            activeSection === item.id ||
+            (item.id === 'dashboard' && activeSection === 'overview');
           return (
             <button
               key={item.id}
@@ -174,14 +178,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* Store Sync Footer */}
       <div className="p-3.5 border-t border-slate-800/80 bg-slate-950/60 flex items-center justify-between">
         <div className="min-w-0">
-          <p className="text-xs font-bold text-white truncate">{STORE_INFO.branch}</p>
+          <p id="sidebar-store-branch" className="text-xs font-bold text-white truncate">
+            {storeProfile?.branchName || STORE_INFO.branch}
+          </p>
           <div className="flex items-center gap-1.5 mt-0.5">
             <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-xs shadow-emerald-500 animate-pulse"></span>
             <span className="text-[10px] text-emerald-400 font-semibold">POS Engine Synced</span>
           </div>
         </div>
-        <span className="text-[10px] text-slate-400 font-mono bg-slate-900 px-2 py-0.5 rounded-lg border border-slate-800">
-          {STORE_INFO.storeId}
+        <span id="sidebar-store-id" className="text-[10px] text-slate-400 font-mono bg-slate-900 px-2 py-0.5 rounded-lg border border-slate-800">
+          {storeProfile?.storeId || STORE_INFO.storeId}
         </span>
       </div>
     </aside>

@@ -11,13 +11,14 @@ import {
   ArrowRight,
   ExternalLink
 } from 'lucide-react';
-import { Product, ChatMessage } from '../types';
+import { Product, ChatMessage, UserProfile } from '../types';
 import { generateCopilotAnswer, getTodayBusinessInsight } from '../utils/copilotEngine';
 
 interface FloatingCopilotPanelProps {
   isOpen: boolean;
   onClose: () => void;
   products: Product[];
+  userProfile?: UserProfile;
   onRequestRestock: (product: Product, suggestedQty?: number) => void;
   onSelectProduct: (product: Product) => void;
 }
@@ -26,14 +27,16 @@ export const FloatingCopilotPanel: React.FC<FloatingCopilotPanelProps> = ({
   isOpen,
   onClose,
   products,
+  userProfile,
   onRequestRestock,
   onSelectProduct,
 }) => {
+  const managerFirstName = userProfile?.name ? userProfile.name.split(' ')[0] : 'Store Manager';
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: 'panel-init',
       sender: 'copilot',
-      text: `Hello Vikram! I'm your **RetailIQ Copilot**.\nI'm constantly monitoring store run-rates, depletion hazards, and purchase order timelines.\n\nHow can I help guide your store operations right now?`,
+      text: `Hello ${managerFirstName}! I'm your **RetailIQ Copilot**.\nI'm constantly monitoring store run-rates, depletion hazards, and purchase order timelines.\n\nHow can I help guide your store operations right now?`,
       timestamp: 'Just now',
     },
   ]);

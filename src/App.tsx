@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
+import { LoginPage } from './components/LoginPage';
 import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
 import { Overview } from './components/Overview';
 import { Inventory } from './components/Inventory';
+import { ProductsView } from './components/ProductsView';
 import { SalesAnalytics } from './components/SalesAnalytics';
 import { SmartRecommendations } from './components/SmartRecommendations';
 import { AICopilot } from './components/AICopilot';
@@ -16,15 +18,45 @@ import { AlertsDrawer } from './components/AlertsDrawer';
 import { ToastContainer, ToastMessage } from './components/Toast';
 import { HackathonDemoGuide, DEMO_STEPS } from './components/HackathonDemoGuide';
 import { INITIAL_PRODUCTS, SALES_TREND_DAYS, INITIAL_ALERTS, INITIAL_RESTOCK_REQUESTS } from './data/mockData';
-import { Product, AlertNotification, PriorityLevel, RestockRequest, ActiveSection, Category } from './types';
+import { Product, AlertNotification, PriorityLevel, RestockRequest, ActiveSection, Category, UserProfile, StoreLocationProfile } from './types';
 import { generateSmartRecommendations } from './utils/analysis';
+import { extractUserProfileFromEmail, DEFAULT_USER_PROFILE, extractStoreProfileFromLocation, DEFAULT_STORE_PROFILE } from './utils/userUtils';
 import { Bot } from 'lucide-react';
 
 export default function App() {
+  // Authentication State: Login page appears first as required
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+
+  // User Profile State: extracted from login email, persists across all pages until logout
+  const [userProfile, setUserProfile] = useState<UserProfile>(() => {
+    try {
+      const stored = localStorage.getItem('retailiq_user_profile');
+      if (stored) {
+        return JSON.parse(stored);
+      }
+    } catch {
+      // ignore
+    }
+    return DEFAULT_USER_PROFILE;
+  });
+
+  // Store Location Profile State: extracted from login branch input, persists across all pages until logout
+  const [storeProfile, setStoreProfile] = useState<StoreLocationProfile>(() => {
+    try {
+      const stored = localStorage.getItem('retailiq_store_profile');
+      if (stored) {
+        return JSON.parse(stored);
+      }
+    } catch {
+      // ignore
+    }
+    return DEFAULT_STORE_PROFILE;
+  });
+
   const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS);
   const [alerts, setAlerts] = useState<AlertNotification[]>(INITIAL_ALERTS);
   const [restockRequests, setRestockRequests] = useState<RestockRequest[]>(INITIAL_RESTOCK_REQUESTS);
-  const [activeSection, setActiveSection] = useState<ActiveSection>('overview');
+  const [activeSection, setActiveSection] = useState<ActiveSection>('dashboard');
 
   // Modals & Drawers
   const [selectedProductForAnalysis, setSelectedProductForAnalysis] = useState<Product | null>(null);
@@ -57,6 +89,41 @@ export default function App() {
 
   const handleDismissToast = (id: string) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
+  };
+
+  // Login handler: captures both user email and store location
+  const handleLoginSuccess = (userEmail?: string, storeLocation?: string) => {
+    const profile = extractUserProfileFromEmail(userEmail || 'vikram.sharma@retailiq.internal');
+    const store = extractStoreProfileFromLocation(storeLocation || 'BR-042 (Indiranagar Central)');
+    setUserProfile(profile);
+    setStoreProfile(store);
+    try {
+      localStorage.setItem('retailiq_user_profile', JSON.stringify(profile));
+      localStorage.setItem('retailiq_store_profile', JSON.stringify(store));
+    } catch {
+      // ignore
+    }
+    setIsAuthenticated(true);
+    setActiveSection('dashboard');
+    showToast(
+      'Signed in successfully',
+      `Welcome back, ${profile.name} • ${store.branchName} Node Live.`,
+      'success'
+    );
+  };
+
+  // Logout handler
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+    setUserProfile(DEFAULT_USER_PROFILE);
+    setStoreProfile(DEFAULT_STORE_PROFILE);
+    try {
+      localStorage.removeItem('retailiq_user_profile');
+      localStorage.removeItem('retailiq_store_profile');
+    } catch {
+      // ignore
+    }
+    showToast('Signed out', 'Manager shift closed successfully.', 'info');
   };
 
   // Restock action trigger
@@ -210,7 +277,7 @@ export default function App() {
   const handleStartDemoFlow = () => {
     setIsDemoActive(true);
     setDemoStepIndex(0);
-    setActiveSection('overview');
+    setActiveSection('dashboard');
     showToast('Hackathon Demo Started', 'Follow the top banner to demonstrate the end-to-end manager workflow.', 'info');
   };
 
@@ -220,6 +287,17 @@ export default function App() {
   const urgentRecsCount = recommendations.filter((r) => r.type === 'RESTOCK NOW').length;
   const unacknowledgedAlertsCount = alerts.filter((a) => !a.acknowledged).length;
 
+  // 1. If not authenticated, render Login Page First
+  if (!isAuthenticated) {
+    return (
+      <>
+        <LoginPage onLogin={handleLoginSuccess} />
+        <ToastContainer toasts={toasts} onDismiss={handleDismissToast} />
+      </>
+    );
+  }
+
+  // 2. Authenticated Store Operations Workspace
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-[#070b14] text-slate-100 font-sans antialiased selection:bg-cyan-500/30 selection:text-cyan-200">
       {/* Sidebar Navigation */}
@@ -228,19 +306,26 @@ export default function App() {
         onSelectSection={setActiveSection}
         lowStockCount={lowStockCount}
         urgentRecsCount={urgentRecsCount}
+        storeProfile={storeProfile}
       />
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden bg-gradient-to-br from-[#070b14] via-[#091024] to-[#0a142e]">
         {/* Top Header */}
         <Header
+          userProfile={userProfile}
+          storeProfile={storeProfile}
           products={products}
           unacknowledgedAlertsCount={unacknowledgedAlertsCount}
           onOpenAlerts={() => setIsAlertsDrawerOpen(true)}
-          onOpenCopilotPanel={() => setIsCopilotPanelOpen(true)}
+          onToggleCopilotPanel={() => setIsCopilotPanelOpen((prev) => !prev)}
+          isCopilotPanelOpen={isCopilotPanelOpen}
           onSelectProduct={(p) => setSelectedProductForAnalysis(p)}
           onStartDemoFlow={handleStartDemoFlow}
           currentDemoStep={isDemoActive ? DEMO_STEPS[demoStepIndex]?.title : null}
+          onLogout={handleLogout}
+          onNavigateToSection={(s) => setActiveSection(s)}
+          onRequestRestock={(p, qty) => handleOpenRestockModal(p, qty)}
         />
 
         {/* Hackathon Interactive Demo Guide Banner */}
@@ -254,7 +339,8 @@ export default function App() {
 
         {/* Dynamic Page Views */}
         <main className="flex-1 overflow-y-auto">
-          {activeSection === 'overview' && (
+          {/* Support both 'dashboard' and 'overview' so dashboard content is NEVER blank */}
+          {(activeSection === 'dashboard' || activeSection === 'overview') && (
             <Overview
               products={products}
               salesTrend={SALES_TREND_DAYS}
@@ -267,12 +353,21 @@ export default function App() {
             />
           )}
 
-          {(activeSection === 'inventory' || activeSection === 'products') && (
+          {activeSection === 'inventory' && (
             <Inventory
               products={products}
               onSelectProduct={(p) => setSelectedProductForAnalysis(p)}
-              onRequestRestock={(p) => handleOpenRestockModal(p)}
+              onRequestRestock={(p, qty) => handleOpenRestockModal(p, qty)}
               onOpenAddProduct={() => setIsAddProductOpen(true)}
+            />
+          )}
+
+          {activeSection === 'products' && (
+            <ProductsView
+              products={products}
+              onSelectProduct={(p) => setSelectedProductForAnalysis(p)}
+              onOpenAddProduct={() => setIsAddProductOpen(true)}
+              onRequestRestock={(p, qty) => handleOpenRestockModal(p, qty)}
             />
           )}
 
@@ -305,13 +400,14 @@ export default function App() {
           {activeSection === 'copilot' && (
             <AICopilot
               products={products}
+              userProfile={userProfile}
               onRequestRestock={(p, qty) => handleOpenRestockModal(p, qty)}
               onSelectProduct={(p) => setSelectedProductForAnalysis(p)}
             />
           )}
 
           {activeSection === 'settings' && (
-            <SettingsView onShowToast={showToast} />
+            <SettingsView userProfile={userProfile} storeProfile={storeProfile} onShowToast={showToast} />
           )}
         </main>
       </div>
@@ -333,6 +429,7 @@ export default function App() {
         isOpen={isCopilotPanelOpen}
         onClose={() => setIsCopilotPanelOpen(false)}
         products={products}
+        userProfile={userProfile}
         onRequestRestock={(p, qty) => handleOpenRestockModal(p, qty)}
         onSelectProduct={(p) => setSelectedProductForAnalysis(p)}
       />

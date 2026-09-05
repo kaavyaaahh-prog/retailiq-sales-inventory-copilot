@@ -14,25 +14,28 @@ import {
   HelpCircle,
   Clock
 } from 'lucide-react';
-import { Product, ChatMessage } from '../types';
+import { Product, ChatMessage, UserProfile } from '../types';
 import { generateCopilotAnswer, getTodayBusinessInsight } from '../utils/copilotEngine';
 
 interface AICopilotProps {
   products: Product[];
+  userProfile?: UserProfile;
   onRequestRestock: (product: Product, suggestedQty?: number) => void;
   onSelectProduct: (product: Product) => void;
 }
 
 export const AICopilot: React.FC<AICopilotProps> = ({
   products,
+  userProfile,
   onRequestRestock,
   onSelectProduct,
 }) => {
+  const managerFirstName = userProfile?.name ? userProfile.name.split(' ')[0] : 'Store Manager';
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: 'msg-init',
       sender: 'copilot',
-      text: `Hello Vikram! I'm your **RetailIQ Copilot**. I've analyzed your store inventory, today's sales velocity, and distributor replenishment schedules.\n\nYou can select one of the suggested prompts below, or ask me anything about sales performance, low stock, or daily manager actions.`,
+      text: `Hello ${managerFirstName}! I'm your **RetailIQ Copilot**. I've analyzed your store inventory, today's sales velocity, and distributor replenishment schedules.\n\nYou can select one of the suggested prompts below, or ask me anything about sales performance, low stock, or daily manager actions.`,
       timestamp: 'Just now',
     },
   ]);

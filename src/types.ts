@@ -95,3 +95,20 @@ export interface ChatMessage {
     priority: PriorityLevel;
   };
 }
+
+export interface UserProfile {
+  name: string;
+  email: string;
+  initials: string;
+  role: string;
+}
+
+export interface StoreLocationProfile {
+  rawLocation: string;
+  storeName: string;
+  branchName: string;
+  fullBranchDisplayName: string;
+  storeId: string;
+  posTerminal: string;
+}
+
