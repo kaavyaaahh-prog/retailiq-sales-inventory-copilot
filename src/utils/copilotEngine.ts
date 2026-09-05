@@ -12,11 +12,19 @@ export interface CopilotResponse {
   };
 }
 
-export function getTodayBusinessInsight(products: Product[]): string {
+export interface TodayInsightResult {
+  insightText: string;
+  recommendedActionProduct?: Product;
+}
+
+export function getTodayBusinessInsight(products: Product[]): TodayInsightResult {
   // Find highest urgency product with high sales
   const cookingOil = products.find(p => p.name.toLowerCase().includes('cooking oil'));
   if (cookingOil && cookingOil.currentStock <= cookingOil.reorderLevel) {
-    return `Your highest priority is Cooking Oil. It has strong sales (${cookingOil.unitsSold} units) but critically low inventory (${cookingOil.currentStock} remaining). Restocking it can prevent lost sales.`;
+    return {
+      insightText: `Your highest priority is Cooking Oil. It has strong sales (${cookingOil.unitsSold} units) but critically low inventory (${cookingOil.currentStock} remaining). Restocking it can prevent lost sales.`,
+      recommendedActionProduct: cookingOil,
+    };
   }
 
   // Fallback dynamic calculation
@@ -25,10 +33,15 @@ export function getTodayBusinessInsight(products: Product[]): string {
     .sort((a, b) => b.unitsSold - a.unitsSold)[0];
 
   if (urgentProduct) {
-    return `Your highest priority is ${urgentProduct.name}. It has strong sales (${urgentProduct.unitsSold} units) but critically low inventory (${urgentProduct.currentStock} remaining). Restocking it can prevent lost sales.`;
+    return {
+      insightText: `Your highest priority is ${urgentProduct.name}. It has strong sales (${urgentProduct.unitsSold} units) but critically low inventory (${urgentProduct.currentStock} remaining). Restocking it can prevent lost sales.`,
+      recommendedActionProduct: urgentProduct,
+    };
   }
 
-  return `All high-velocity inventory lines are currently above safe threshold. Focus on stock rotation for slow-moving items today.`;
+  return {
+    insightText: `All high-velocity inventory lines are currently above safe threshold. Focus on stock rotation for slow-moving items today.`,
+  };
 }
 
 export function generateCopilotAnswer(query: string, products: Product[]): CopilotResponse {

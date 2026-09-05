@@ -11,7 +11,8 @@ import {
   TrendingUp,
   AlertTriangle,
   CheckCircle2,
-  HelpCircle
+  HelpCircle,
+  Clock
 } from 'lucide-react';
 import { Product, ChatMessage } from '../types';
 import { generateCopilotAnswer, getTodayBusinessInsight } from '../utils/copilotEngine';
@@ -31,9 +32,7 @@ export const AICopilot: React.FC<AICopilotProps> = ({
     {
       id: 'msg-init',
       sender: 'copilot',
-      text: `Hello Vikram! I'm your **RetailIQ Copilot**. I've analyzed your store inventory, today's sales velocity, and distributor replenishment schedules.
-
-You can select one of the suggested prompts below, or ask me anything about sales performance, low stock, or daily manager actions.`,
+      text: `Hello Vikram! I'm your **RetailIQ Copilot**. I've analyzed your store inventory, today's sales velocity, and distributor replenishment schedules.\n\nYou can select one of the suggested prompts below, or ask me anything about sales performance, low stock, or daily manager actions.`,
       timestamp: 'Just now',
     },
   ]);
@@ -42,13 +41,14 @@ You can select one of the suggested prompts below, or ask me anything about sale
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // Suggested questions from user prompt
   const suggestedQuestions = [
-    'Which products should I restock?',
-    'What is my best-selling product?',
+    'Which products need restocking?',
+    'What are my best-selling products?',
+    "Predict tomorrow's demand.",
     'Which products are low in stock?',
-    'Which products are overstocked?',
-    'What should I focus on today?',
-    'How can I improve inventory?',
+    'What action should the manager take today?',
+    'What products are not selling?',
   ];
 
   // Auto scroll to bottom
@@ -64,35 +64,34 @@ You can select one of the suggested prompts below, or ask me anything about sale
     const query = (textToSend || inputQuery).trim();
     if (!query) return;
 
-    const userMsgId = `user-${Date.now()}`;
-    const newUserMsg: ChatMessage = {
-      id: userMsgId,
+    const userMsg: ChatMessage = {
+      id: `usr-${Date.now()}`,
       sender: 'user',
       text: query,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     };
 
-    setMessages((prev) => [...prev, newUserMsg]);
+    setMessages((prev) => [...prev, userMsg]);
     setInputQuery('');
     setIsTyping(true);
 
-    // Simulate natural thinking delay
+    // Simulate AI thinking
     setTimeout(() => {
       const response = generateCopilotAnswer(query, products);
-      const matchingProduct = response.suggestedAction
+      const actionProduct = response.suggestedAction
         ? products.find((p) => p.id === response.suggestedAction?.productId)
         : undefined;
 
-      const newCopilotMsg: ChatMessage = {
-        id: `copilot-${Date.now()}`,
+      const copilotMsg: ChatMessage = {
+        id: `cpl-${Date.now()}`,
         sender: 'copilot',
         text: response.text,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         suggestedAction: response.suggestedAction,
-        actionProduct: matchingProduct,
+        actionProduct,
       };
 
-      setMessages((prev) => [...prev, newCopilotMsg]);
+      setMessages((prev) => [...prev, copilotMsg]);
       setIsTyping(false);
     }, 450);
   };
@@ -103,105 +102,106 @@ You can select one of the suggested prompts below, or ask me anything about sale
     }
   };
 
-  const businessInsight = getTodayBusinessInsight(products);
+  const todayInsight = getTodayBusinessInsight(products);
 
   return (
-    <div id="ai-copilot-screen" className="p-8 max-w-5xl mx-auto flex flex-col h-[calc(100vh-4rem)]">
-      {/* Page Title & Daily Business Insight Banner */}
-      <div className="shrink-0 space-y-4 mb-4">
-        <div className="flex items-center justify-between">
+    <div id="ai-copilot-screen" className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-5xl mx-auto">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-blue-600 flex items-center justify-center text-white shadow-md shadow-indigo-500/20">
+            <span className="p-2 rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
               <Bot className="w-5 h-5" />
-            </div>
-            <div>
-              <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">
-                RetailIQ Copilot
-              </h2>
-              <p className="text-xs text-slate-500">
-                Context-aware conversational intelligence for store managers
-              </p>
-            </div>
+            </span>
+            <h2 className="text-2xl font-extrabold text-white tracking-tight">
+              RetailIQ AI Copilot
+            </h2>
+            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-cyan-950 text-cyan-400 border border-cyan-800">
+              Online
+            </span>
           </div>
-
-          <button
-            id="btn-copilot-reset-chat"
-            onClick={() =>
-              setMessages([
-                {
-                  id: `reset-${Date.now()}`,
-                  sender: 'copilot',
-                  text: 'Chat history cleared. How can I help you optimize your store operations right now?',
-                  timestamp: 'Just now',
-                },
-              ])
-            }
-            className="text-xs font-semibold text-slate-500 hover:text-slate-800 flex items-center gap-1 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 shadow-xs cursor-pointer"
-          >
-            <RefreshCcw className="w-3 h-3" />
-            <span>Clear Chat</span>
-          </button>
+          <p className="text-xs sm:text-sm text-slate-400 mt-1">
+            Natural language assistant trained on retail operations, reorder points, and sales patterns.
+          </p>
         </div>
 
-        {/* TODAY'S BUSINESS INSIGHT (Specified in prompt) */}
-        <div
-          id="todays-business-insight"
-          className="p-4 rounded-2xl bg-gradient-to-r from-blue-950 via-indigo-950 to-slate-900 text-white shadow-sm border border-indigo-800/40 relative overflow-hidden"
+        <button
+          onClick={() =>
+            setMessages([
+              {
+                id: `rst-${Date.now()}`,
+                sender: 'copilot',
+                text: 'Conversation reset. Ask me anything about stockout hazards, reorders, or today’s sales!',
+                timestamp: 'Just now',
+              },
+            ])
+          }
+          className="px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white bg-slate-800/80 hover:bg-slate-800 border border-slate-700 transition-all flex items-center gap-1.5 cursor-pointer self-start sm:self-auto"
         >
-          <div className="relative z-10 flex items-start gap-3.5">
-            <div className="p-2 rounded-xl bg-indigo-500/20 text-indigo-300 shrink-0 border border-indigo-400/30">
-              <Sparkles className="w-5 h-5 text-indigo-300" />
-            </div>
-            <div className="space-y-1 flex-1">
-              <div className="flex items-center gap-2">
-                <span className="text-[11px] font-extrabold tracking-wider uppercase text-indigo-300">
-                  Today's Business Insight
-                </span>
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-                <span className="text-[10px] text-slate-400 font-mono">Live Velocity Audit</span>
-              </div>
-              <p className="text-sm font-semibold text-slate-100 leading-relaxed">
-                "{businessInsight}"
-              </p>
-            </div>
-          </div>
-        </div>
+          <RefreshCcw className="w-3.5 h-3.5" />
+          <span>Clear Chat</span>
+        </button>
       </div>
 
-      {/* Main Chat Conversation Container */}
-      <div className="flex-1 bg-white rounded-3xl border border-slate-200 shadow-xs flex flex-col overflow-hidden">
-        {/* Messages Scroll Area */}
-        <div className="flex-1 p-6 overflow-y-auto space-y-5">
+      {/* Daily Priority Banner */}
+      <div className="p-4 rounded-2xl bg-gradient-to-r from-slate-900 via-slate-900 to-cyan-950/40 border border-cyan-500/30 backdrop-blur-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-lg">
+        <div className="flex items-start gap-3">
+          <div className="p-2 rounded-xl bg-cyan-500/10 text-cyan-400 mt-0.5 shrink-0">
+            <Sparkles className="w-4 h-4" />
+          </div>
+          <div>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-cyan-400 block">
+              Autonomous Manager Briefing
+            </span>
+            <p className="text-xs text-slate-200 mt-0.5 leading-relaxed">
+              {todayInsight.insightText}
+            </p>
+          </div>
+        </div>
+
+        {todayInsight.recommendedActionProduct && (
+          <button
+            onClick={() => onRequestRestock(todayInsight.recommendedActionProduct!, 50)}
+            className="px-3.5 py-2 rounded-xl text-xs font-bold bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white transition-all shadow-md shadow-cyan-500/20 flex items-center gap-1.5 shrink-0 cursor-pointer"
+          >
+            <ShoppingCart className="w-3.5 h-3.5" />
+            <span>Restock {todayInsight.recommendedActionProduct.name}</span>
+          </button>
+        )}
+      </div>
+
+      {/* Main Chat Container */}
+      <div className="rounded-3xl bg-slate-900/70 border border-slate-800 backdrop-blur-xl shadow-2xl flex flex-col h-[560px] overflow-hidden">
+        {/* Chat History */}
+        <div className="flex-1 p-5 overflow-y-auto space-y-4">
           {messages.map((msg) => {
             const isUser = msg.sender === 'user';
             return (
               <div
                 key={msg.id}
-                id={`chat-msg-${msg.id}`}
-                className={`flex gap-3.5 ${isUser ? 'justify-end' : 'justify-start'}`}
+                className={`flex gap-3 ${isUser ? 'justify-end' : 'justify-start'}`}
               >
                 {!isUser && (
-                  <div className="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-xs mt-1">
+                  <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-cyan-500 to-blue-600 text-white flex items-center justify-center shrink-0 shadow-sm mt-0.5">
                     <Bot className="w-4 h-4" />
                   </div>
                 )}
 
                 <div
-                  className={`max-w-2xl rounded-2xl p-4 text-xs sm:text-sm leading-relaxed ${
+                  className={`max-w-[85%] sm:max-w-[78%] rounded-2xl p-4 text-xs leading-relaxed ${
                     isUser
-                      ? 'bg-blue-600 text-white rounded-br-xs shadow-xs'
-                      : 'bg-slate-50 text-slate-900 border border-slate-200/80 rounded-bl-xs'
+                      ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white rounded-br-xs shadow-md shadow-cyan-600/20'
+                      : 'bg-slate-800/80 border border-slate-700 text-slate-200 rounded-bl-xs'
                   }`}
                 >
                   <div className="whitespace-pre-line space-y-1.5">
                     {msg.text.split('\n').map((line, idx) => {
-                      // Render markdown bolding simply
                       const renderLineWithBold = (str: string) => {
                         const parts = str.split(/(\*\*.*?\*\*)/g);
                         return parts.map((part, i) => {
                           if (part.startsWith('**') && part.endsWith('**')) {
                             return (
-                              <strong key={i} className={isUser ? 'text-white' : 'text-slate-900 font-bold'}>
+                              <strong key={i} className="text-white font-bold">
                                 {part.slice(2, -2)}
                               </strong>
                             );
@@ -209,7 +209,6 @@ You can select one of the suggested prompts below, or ask me anything about sale
                           return part;
                         });
                       };
-
                       return (
                         <p key={idx} className={line.trim() === '' ? 'h-2' : ''}>
                           {renderLineWithBold(line)}
@@ -218,57 +217,46 @@ You can select one of the suggested prompts below, or ask me anything about sale
                     })}
                   </div>
 
-                  {/* Interactive Action Button embedded inside Copilot response */}
+                  {/* Inline Action Button */}
                   {msg.suggestedAction && msg.actionProduct && (
-                    <div className="mt-3.5 pt-3 border-t border-slate-200/80 flex items-center justify-between gap-3">
-                      <div className="text-xs font-semibold text-slate-700">
-                        {msg.actionProduct.name} · Rec. Quantity:{' '}
-                        <strong>{msg.suggestedAction.recommendedQty} units</strong>
+                    <div className="mt-3 pt-3 border-t border-slate-700 flex items-center justify-between gap-3">
+                      <div className="text-[11px] font-bold text-cyan-300">
+                        Recommendation: Restock {msg.suggestedAction.recommendedQty} units
                       </div>
                       <button
-                        id={`btn-copilot-action-${msg.actionProduct.id}`}
-                        onClick={() =>
-                          onRequestRestock(msg.actionProduct!, msg.suggestedAction?.recommendedQty)
-                        }
-                        className="px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+                        onClick={() => onRequestRestock(msg.actionProduct!, msg.suggestedAction?.recommendedQty)}
+                        className="px-3 py-1.5 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-extrabold text-xs flex items-center gap-1 shadow-sm transition-colors cursor-pointer"
                       >
                         <ShoppingCart className="w-3.5 h-3.5" />
-                        <span>Create Restock Request</span>
+                        <span>Create PO Now</span>
                       </button>
                     </div>
                   )}
 
-                  <div
-                    className={`text-[10px] mt-2 text-right ${
-                      isUser ? 'text-blue-200' : 'text-slate-400'
-                    }`}
-                  >
+                  <div className="text-[9px] mt-2 text-right text-slate-400 font-mono">
                     {msg.timestamp}
                   </div>
                 </div>
 
                 {isUser && (
-                  <div className="w-8 h-8 rounded-xl bg-slate-800 text-white flex items-center justify-center shrink-0 shadow-xs mt-1">
-                    <User className="w-4 h-4" />
+                  <div className="w-8 h-8 rounded-xl bg-slate-800 border border-slate-700 text-cyan-400 flex items-center justify-center shrink-0 mt-0.5 font-bold text-xs">
+                    VS
                   </div>
                 )}
               </div>
             );
           })}
 
-          {/* Typing indicator */}
           {isTyping && (
-            <div className="flex gap-3.5 items-center">
-              <div className="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center shrink-0">
+            <div className="flex gap-3 items-center">
+              <div className="w-8 h-8 rounded-xl bg-cyan-600 text-white flex items-center justify-center shrink-0">
                 <Bot className="w-4 h-4" />
               </div>
-              <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-slate-500 text-xs flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-indigo-500 animate-bounce"></span>
-                <span className="w-2 h-2 rounded-full bg-indigo-500 animate-bounce [animation-delay:0.2s]"></span>
-                <span className="w-2 h-2 rounded-full bg-indigo-500 animate-bounce [animation-delay:0.4s]"></span>
-                <span className="ml-1 text-[11px] font-medium text-slate-400">
-                  Analyzing inventory run-rates & purchase orders...
-                </span>
+              <div className="p-3.5 rounded-2xl bg-slate-800/80 border border-slate-700 text-slate-400 text-xs flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-cyan-400 animate-bounce"></span>
+                <span className="w-2 h-2 rounded-full bg-cyan-400 animate-bounce [animation-delay:0.2s]"></span>
+                <span className="w-2 h-2 rounded-full bg-cyan-400 animate-bounce [animation-delay:0.4s]"></span>
+                <span className="text-xs text-slate-300 ml-1">Analyzing store telemetry...</span>
               </div>
             </div>
           )}
@@ -276,19 +264,18 @@ You can select one of the suggested prompts below, or ask me anything about sale
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Suggested Questions Chips (Specified in prompt) */}
-        <div className="px-6 py-3 border-t border-slate-100 bg-slate-50/50">
-          <div className="flex items-center gap-1.5 mb-2 text-[11px] font-bold uppercase tracking-wider text-slate-400">
-            <Lightbulb className="w-3 h-3 text-amber-500" />
-            <span>Suggested Inquiries</span>
+        {/* Suggested Inquiries */}
+        <div className="p-3.5 border-t border-slate-800 bg-slate-950/70 space-y-2">
+          <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+            <Lightbulb className="w-3 h-3 text-cyan-400" />
+            <span>Suggested Manager Queries</span>
           </div>
-          <div className="flex flex-wrap gap-2">
-            {suggestedQuestions.map((q, idx) => (
+          <div className="flex flex-wrap gap-1.5">
+            {suggestedQuestions.map((q, i) => (
               <button
-                key={idx}
-                id={`btn-suggested-q-${idx}`}
+                key={i}
                 onClick={() => handleSendMessage(q)}
-                className="px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-xs font-semibold text-slate-700 hover:text-blue-700 hover:border-blue-300 hover:bg-blue-50 transition-all cursor-pointer shadow-xs"
+                className="px-3 py-1 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 hover:border-cyan-500/40 text-[11px] text-slate-300 hover:text-white font-medium transition-all cursor-pointer"
               >
                 "{q}"
               </button>
@@ -296,31 +283,27 @@ You can select one of the suggested prompts below, or ask me anything about sale
           </div>
         </div>
 
-        {/* Chat Input Bar */}
-        <div className="p-4 border-t border-slate-200 bg-white">
-          <div className="flex items-center gap-2">
-            <input
-              id="copilot-input-field"
-              type="text"
-              value={inputQuery}
-              onChange={(e) => setInputQuery(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Ask Copilot about sales, reorders, stockouts, or suppliers..."
-              className="flex-1 py-2.5 px-4 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 focus:bg-white transition-all"
-            />
-            <button
-              id="btn-copilot-send"
-              onClick={() => handleSendMessage()}
-              disabled={!inputQuery.trim() || isTyping}
-              className={`p-2.5 rounded-xl text-white font-semibold transition-all flex items-center justify-center cursor-pointer ${
-                inputQuery.trim() && !isTyping
-                  ? 'bg-blue-600 hover:bg-blue-700 shadow-md shadow-blue-600/20'
-                  : 'bg-slate-300 text-slate-500 cursor-not-allowed'
-              }`}
-            >
-              <Send className="w-4 h-4" />
-            </button>
-          </div>
+        {/* Input Bar */}
+        <div className="p-4 border-t border-slate-800 bg-slate-950 flex items-center gap-2">
+          <input
+            type="text"
+            value={inputQuery}
+            onChange={(e) => setInputQuery(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Ask Copilot about sales, inventory hazards, or reorder quantities..."
+            className="flex-1 py-2.5 px-4 text-xs bg-slate-900 border border-slate-700 rounded-xl text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/30 focus:border-cyan-500"
+          />
+          <button
+            onClick={() => handleSendMessage()}
+            disabled={!inputQuery.trim() || isTyping}
+            className={`p-2.5 rounded-xl text-white font-bold transition-all ${
+              inputQuery.trim() && !isTyping
+                ? 'bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 shadow-md shadow-cyan-500/30 cursor-pointer'
+                : 'bg-slate-800 text-slate-600 cursor-not-allowed'
+            }`}
+          >
+            <Send className="w-4 h-4" />
+          </button>
         </div>
       </div>
     </div>

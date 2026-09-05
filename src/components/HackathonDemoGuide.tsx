@@ -1,7 +1,6 @@
 import React from 'react';
 import { Play, CheckCircle2, ChevronRight, Sparkles, X } from 'lucide-react';
-import { ActiveSection } from './Sidebar';
-import { Product } from '../types';
+import { ActiveSection, Product } from '../types';
 
 export interface DemoStep {
   step: number;
@@ -88,10 +87,10 @@ export const HackathonDemoGuide: React.FC<HackathonDemoGuideProps> = ({
   return (
     <div
       id="hackathon-demo-banner"
-      className="bg-slate-900 text-white border-b border-indigo-500/30 px-6 py-2.5 flex items-center justify-between text-xs sticky top-16 z-20 shadow-md"
+      className="bg-slate-900/90 backdrop-blur-xl text-white border-b border-cyan-500/30 px-6 py-2.5 flex items-center justify-between text-xs sticky top-16 z-20 shadow-xl"
     >
       <div className="flex items-center gap-3 min-w-0">
-        <span className="px-2 py-0.5 rounded-full bg-indigo-500 text-white font-extrabold text-[10px] tracking-wide uppercase flex items-center gap-1 shrink-0">
+        <span className="px-2 py-0.5 rounded-full bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-extrabold text-[10px] tracking-wide uppercase flex items-center gap-1 shrink-0 shadow-xs">
           <Sparkles className="w-3 h-3" />
           Hackathon Demo Flow
         </span>
@@ -107,7 +106,7 @@ export const HackathonDemoGuide: React.FC<HackathonDemoGuideProps> = ({
         <button
           id="btn-demo-next-action"
           onClick={onNextStep}
-          className="px-3 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+          className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-md shadow-cyan-500/20"
         >
           <span>{currentStep.actionText}</span>
           <ChevronRight className="w-3.5 h-3.5" />
@@ -116,7 +115,7 @@ export const HackathonDemoGuide: React.FC<HackathonDemoGuideProps> = ({
         <button
           id="btn-close-demo-guide"
           onClick={onClose}
-          className="p-1 text-slate-400 hover:text-white transition-colors"
+          className="p-1.5 text-slate-400 hover:text-white transition-colors cursor-pointer"
           title="Dismiss demo bar"
         >
           <X className="w-4 h-4" />

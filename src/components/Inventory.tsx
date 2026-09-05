@@ -8,12 +8,12 @@ import {
   AlertTriangle,
   CheckCircle2,
   XCircle,
-  PlusCircle,
+  Plus,
   Eye,
   ShoppingCart,
   SlidersHorizontal,
-  RefreshCw,
-  Sparkles
+  Package,
+  Boxes
 } from 'lucide-react';
 import { Product, Category, StockStatus, PriorityLevel } from '../types';
 import { calculateStockStatus, calculatePriority, formatCurrency } from '../utils/analysis';
@@ -22,6 +22,7 @@ interface InventoryProps {
   products: Product[];
   onSelectProduct: (product: Product) => void;
   onRequestRestock: (product: Product) => void;
+  onOpenAddProduct?: () => void;
 }
 
 type SortField = 'sales' | 'stock' | 'priority' | 'name' | 'revenue';
@@ -31,6 +32,7 @@ export const Inventory: React.FC<InventoryProps> = ({
   products,
   onSelectProduct,
   onRequestRestock,
+  onOpenAddProduct,
 }) => {
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
@@ -52,62 +54,47 @@ export const Inventory: React.FC<InventoryProps> = ({
 
   // Filter and sort products
   const filteredProducts = useMemo(() => {
-    return products.filter((p) => {
-      // Search
-      const matchesSearch =
-        p.name.toLowerCase().includes(search.toLowerCase()) ||
-        p.category.toLowerCase().includes(search.toLowerCase());
+    return products
+      .filter((p) => {
+        const matchesSearch =
+          p.name.toLowerCase().includes(search.toLowerCase()) ||
+          p.category.toLowerCase().includes(search.toLowerCase()) ||
+          p.supplier.toLowerCase().includes(search.toLowerCase());
 
-      // Category filter
-      const matchesCategory = selectedCategory === 'All' || p.category === selectedCategory;
+        const matchesCategory = selectedCategory === 'All' || p.category === selectedCategory;
 
-      // Status filter
-      const status = calculateStockStatus(p);
-      let matchesStatus = true;
-      if (selectedStatus === 'critical') {
-        matchesStatus = status === 'critical' || status === 'out_of_stock';
-      } else if (selectedStatus === 'low') {
-        matchesStatus = status === 'low' || status === 'critical' || status === 'out_of_stock';
-      } else if (selectedStatus === 'normal') {
-        matchesStatus = status === 'normal';
-      } else if (selectedStatus === 'overstocked') {
-        matchesStatus = status === 'overstocked';
-      }
+        const status = calculateStockStatus(p);
+        let matchesStatus = true;
+        if (selectedStatus === 'critical') {
+          matchesStatus = status === 'critical' || status === 'out_of_stock';
+        } else if (selectedStatus === 'low') {
+          matchesStatus = status === 'low';
+        } else if (selectedStatus === 'normal') {
+          matchesStatus = status === 'normal';
+        } else if (selectedStatus === 'overstocked') {
+          matchesStatus = status === 'overstocked';
+        }
 
-      return matchesSearch && matchesCategory && matchesStatus;
-    });
-  }, [products, search, selectedCategory, selectedStatus]);
-
-  // Sorted products
-  const sortedProducts = useMemo(() => {
-    const list = [...filteredProducts];
-    const priorityWeight: Record<PriorityLevel, number> = {
-      urgent: 4,
-      high: 3,
-      medium: 2,
-      low: 1,
-    };
-
-    list.sort((a, b) => {
-      let comparison = 0;
-      if (sortField === 'sales') {
-        comparison = a.unitsSold - b.unitsSold;
-      } else if (sortField === 'stock') {
-        comparison = a.currentStock - b.currentStock;
-      } else if (sortField === 'revenue') {
-        comparison = a.revenue - b.revenue;
-      } else if (sortField === 'name') {
-        comparison = a.name.localeCompare(b.name);
-      } else if (sortField === 'priority') {
-        const pA = priorityWeight[calculatePriority(a)];
-        const pB = priorityWeight[calculatePriority(b)];
-        comparison = pA - pB;
-      }
-      return sortOrder === 'asc' ? comparison : -comparison;
-    });
-
-    return list;
-  }, [filteredProducts, sortField, sortOrder]);
+        return matchesSearch && matchesCategory && matchesStatus;
+      })
+      .sort((a, b) => {
+        let comp = 0;
+        if (sortField === 'sales') comp = a.unitsSold - b.unitsSold;
+        else if (sortField === 'stock') comp = a.currentStock - b.currentStock;
+        else if (sortField === 'revenue') comp = a.revenue - b.revenue;
+        else if (sortField === 'name') comp = a.name.localeCompare(b.name);
+        else if (sortField === 'priority') {
+          const priorityScore: Record<PriorityLevel, number> = {
+            urgent: 4,
+            high: 3,
+            medium: 2,
+            low: 1,
+          };
+          comp = priorityScore[calculatePriority(a)] - priorityScore[calculatePriority(b)];
+        }
+        return sortOrder === 'asc' ? comp : -comp;
+      });
+  }, [products, search, selectedCategory, selectedStatus, sortField, sortOrder]);
 
   const toggleSort = (field: SortField) => {
     if (sortField === field) {
@@ -118,349 +105,285 @@ export const Inventory: React.FC<InventoryProps> = ({
     }
   };
 
-  const renderStockBadge = (product: Product) => {
-    const status = calculateStockStatus(product);
-    if (status === 'out_of_stock') {
-      return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-bold bg-rose-100 text-rose-800 border border-rose-200">
-          <XCircle className="w-3 h-3 text-rose-600" />
-          Out of Stock
-        </span>
-      );
-    }
-    if (status === 'critical') {
-      return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
-          <AlertTriangle className="w-3 h-3 text-rose-500" />
-          Critical ({product.currentStock})
-        </span>
-      );
-    }
-    if (status === 'low') {
-      return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
-          <AlertTriangle className="w-3 h-3 text-amber-500" />
-          Low Stock ({product.currentStock})
-        </span>
-      );
-    }
-    if (status === 'overstocked') {
-      return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-bold bg-yellow-50 text-yellow-800 border border-yellow-200">
-          Overstocked ({product.currentStock})
-        </span>
-      );
-    }
-    return (
-      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
-        <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-        Healthy ({product.currentStock})
-      </span>
-    );
-  };
-
-  const renderPriorityBadge = (priority: PriorityLevel) => {
-    switch (priority) {
-      case 'urgent':
-        return (
-          <span className="px-2.5 py-1 rounded-md text-[11px] font-extrabold bg-rose-600 text-white uppercase tracking-wider shadow-xs">
-            Urgent
-          </span>
-        );
-      case 'high':
-        return (
-          <span className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-amber-500 text-white uppercase tracking-wider">
-            High
-          </span>
-        );
-      case 'medium':
-        return (
-          <span className="px-2.5 py-1 rounded-md text-[11px] font-semibold bg-slate-200 text-slate-700 uppercase tracking-wider">
-            Medium
-          </span>
-        );
-      case 'low':
-      default:
-        return (
-          <span className="px-2.5 py-1 rounded-md text-[11px] font-semibold bg-slate-100 text-slate-600 uppercase tracking-wider">
-            Normal
-          </span>
-        );
-    }
-  };
+  const criticalCount = products.filter((p) => p.currentStock === 0 || p.currentStock <= p.reorderLevel * 0.4).length;
+  const lowCount = products.filter((p) => p.currentStock > p.reorderLevel * 0.4 && p.currentStock <= p.reorderLevel).length;
+  const healthyCount = products.filter((p) => p.currentStock > p.reorderLevel).length;
 
   return (
-    <div id="inventory-screen" className="p-8 space-y-6 max-w-7xl mx-auto">
-      {/* Top Header */}
+    <div id="inventory-management-screen" className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
+      {/* Header Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">
-            Inventory Management
-          </h2>
-          <p className="text-sm text-slate-500 mt-0.5">
-            Monitor real-time stock levels, reorder thresholds, demand run-rates, and restock actions.
+          <div className="flex items-center gap-2.5">
+            <span className="p-2 rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+              <Package className="w-5 h-5" />
+            </span>
+            <h2 className="text-2xl font-extrabold text-white tracking-tight">
+              Inventory Management
+            </h2>
+          </div>
+          <p className="text-xs sm:text-sm text-slate-400 mt-1">
+            Real-time stock audit, safety buffers, velocity ratios, and replenishment actions.
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 shadow-xs">
-            Total Catalog: {products.length} Products
-          </span>
+
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          {onOpenAddProduct && (
+            <button
+              onClick={onOpenAddProduct}
+              className="px-4 py-2 rounded-xl text-xs font-bold bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white shadow-lg shadow-cyan-500/20 flex items-center gap-2 transition-all cursor-pointer"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Add Product</span>
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Control Bar: Search, Category Filters, Status Filters, and Sorting Buttons */}
-      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs space-y-3">
-        <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
-          {/* Search Input */}
-          <div className="relative flex-1">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+      {/* Stock Health Badges Header */}
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+        <div className="p-4 rounded-2xl bg-slate-900/70 border border-slate-800 backdrop-blur-xl">
+          <span className="text-[11px] font-bold text-slate-400 uppercase">Catalog Size</span>
+          <div className="text-xl font-extrabold text-white mt-1">{products.length} Products</div>
+          <span className="text-[11px] text-slate-500">6 Active Departments</span>
+        </div>
+        <div className="p-4 rounded-2xl bg-slate-900/70 border border-slate-800 backdrop-blur-xl">
+          <span className="text-[11px] font-bold text-rose-400 uppercase">Critical Restock</span>
+          <div className="text-xl font-extrabold text-rose-400 mt-1">{criticalCount} Items</div>
+          <span className="text-[11px] text-slate-500">Immediate action needed</span>
+        </div>
+        <div className="p-4 rounded-2xl bg-slate-900/70 border border-slate-800 backdrop-blur-xl">
+          <span className="text-[11px] font-bold text-amber-400 uppercase">Low Stock</span>
+          <div className="text-xl font-extrabold text-amber-400 mt-1">{lowCount} Items</div>
+          <span className="text-[11px] text-slate-500">Below reorder mark</span>
+        </div>
+        <div className="p-4 rounded-2xl bg-slate-900/70 border border-slate-800 backdrop-blur-xl">
+          <span className="text-[11px] font-bold text-emerald-400 uppercase">Healthy Inventory</span>
+          <div className="text-xl font-extrabold text-emerald-400 mt-1">{healthyCount} Items</div>
+          <span className="text-[11px] text-slate-500">Adequate coverage</span>
+        </div>
+      </div>
+
+      {/* Search & Filter Controls Bar */}
+      <div className="p-4 rounded-2xl bg-slate-900/70 border border-slate-800 backdrop-blur-xl shadow-lg space-y-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {/* Search */}
+          <div className="relative">
+            <Search className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
-              id="inventory-search-input"
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search product name or category (e.g. Cooking Oil, Rice, Snacks)..."
-              className="w-full pl-9 pr-4 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 focus:bg-white transition-all"
+              placeholder="Search product, category, or supplier..."
+              className="w-full pl-9 pr-3 py-2 text-xs bg-slate-800/80 border border-slate-700 rounded-xl text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/30 focus:border-cyan-500"
             />
           </div>
 
-          {/* Quick Filters */}
-          <div className="flex flex-wrap items-center gap-2">
-            {/* Category Dropdown */}
-            <div className="flex items-center gap-1.5">
-              <label htmlFor="inventory-category-select" className="text-xs font-medium text-slate-500">Category:</label>
-              <select
-                id="inventory-category-select"
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
-                className="text-xs font-semibold py-1.5 px-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-              >
-                {categories.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
-            </div>
+          {/* Category Filter */}
+          <div className="relative">
+            <select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className="w-full py-2 px-3 text-xs bg-slate-800/80 border border-slate-700 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/30 focus:border-cyan-500 font-semibold"
+            >
+              {categories.map((c) => (
+                <option key={c} value={c}>
+                  Category: {c}
+                </option>
+              ))}
+            </select>
+          </div>
 
-            {/* Status Dropdown */}
-            <div className="flex items-center gap-1.5">
-              <label htmlFor="inventory-status-select" className="text-xs font-medium text-slate-500">Status:</label>
-              <select
-                id="inventory-status-select"
-                value={selectedStatus}
-                onChange={(e) => setSelectedStatus(e.target.value)}
-                className="text-xs font-semibold py-1.5 px-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-              >
-                {statuses.map((s) => (
-                  <option key={s.value} value={s.value}>
-                    {s.label}
-                  </option>
-                ))}
-              </select>
-            </div>
+          {/* Stock Status Filter */}
+          <div className="relative">
+            <select
+              value={selectedStatus}
+              onChange={(e) => setSelectedStatus(e.target.value)}
+              className="w-full py-2 px-3 text-xs bg-slate-800/80 border border-slate-700 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/30 focus:border-cyan-500 font-semibold"
+            >
+              {statuses.map((s) => (
+                <option key={s.value} value={s.value}>
+                  Status: {s.label}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 
-        {/* Sorting Pills / Bar */}
-        <div className="pt-2 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
-          <div className="flex items-center gap-1.5">
-            <span className="font-semibold text-slate-700">Sort by:</span>
-            <button
-              id="sort-btn-priority"
-              onClick={() => toggleSort('priority')}
-              className={`px-2.5 py-1 rounded-lg font-medium transition-colors flex items-center gap-1 ${
-                sortField === 'priority'
-                  ? 'bg-blue-50 text-blue-700 font-bold border border-blue-200'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-              }`}
-            >
-              Priority {sortField === 'priority' && (sortOrder === 'desc' ? '↓' : '↑')}
-            </button>
-            <button
-              id="sort-btn-sales"
-              onClick={() => toggleSort('sales')}
-              className={`px-2.5 py-1 rounded-lg font-medium transition-colors flex items-center gap-1 ${
-                sortField === 'sales'
-                  ? 'bg-blue-50 text-blue-700 font-bold border border-blue-200'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-              }`}
-            >
-              Sales Units {sortField === 'sales' && (sortOrder === 'desc' ? '↓' : '↑')}
-            </button>
-            <button
-              id="sort-btn-stock"
-              onClick={() => toggleSort('stock')}
-              className={`px-2.5 py-1 rounded-lg font-medium transition-colors flex items-center gap-1 ${
-                sortField === 'stock'
-                  ? 'bg-blue-50 text-blue-700 font-bold border border-blue-200'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-              }`}
-            >
-              Current Stock {sortField === 'stock' && (sortOrder === 'desc' ? '↓' : '↑')}
-            </button>
-            <button
-              id="sort-btn-revenue"
-              onClick={() => toggleSort('revenue')}
-              className={`px-2.5 py-1 rounded-lg font-medium transition-colors flex items-center gap-1 ${
-                sortField === 'revenue'
-                  ? 'bg-blue-50 text-blue-700 font-bold border border-blue-200'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-              }`}
-            >
-              Revenue {sortField === 'revenue' && (sortOrder === 'desc' ? '↓' : '↑')}
-            </button>
-          </div>
+        {/* Sort Chips */}
+        <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-800 text-xs">
+          <span className="text-[11px] font-bold uppercase text-slate-500 mr-1 flex items-center gap-1">
+            <ArrowUpDown className="w-3 h-3 text-cyan-400" /> Sort By:
+          </span>
 
-          <div className="text-[11px] text-slate-400">
-            Showing <span className="font-bold text-slate-700">{sortedProducts.length}</span> items
-          </div>
+          {[
+            { id: 'priority', label: 'Priority Urgency' },
+            { id: 'sales', label: 'Units Sold' },
+            { id: 'stock', label: 'Current Stock' },
+            { id: 'revenue', label: 'Revenue' },
+            { id: 'name', label: 'Product Name' },
+          ].map((s) => {
+            const isSelected = sortField === s.id;
+            return (
+              <button
+                key={s.id}
+                onClick={() => toggleSort(s.id as SortField)}
+                className={`px-3 py-1 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer ${
+                  isSelected
+                    ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-xs'
+                    : 'bg-slate-800/60 text-slate-400 hover:text-white border border-slate-800'
+                }`}
+              >
+                <span>{s.label}</span>
+                {isSelected && (sortOrder === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />)}
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      {/* Inventory Table (Exact columns requested: Product, Category, Price, Current Stock, Reorder Level, Units Sold, Revenue, Stock Status, Priority, Action) */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+      {/* 10-COLUMN INVENTORY TABLE */}
+      <div className="rounded-3xl bg-slate-900/70 border border-slate-800 shadow-xl overflow-hidden backdrop-blur-xl">
         <div className="overflow-x-auto">
-          <table id="inventory-table" className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-slate-50/80 border-b border-slate-200 text-[11px] font-bold uppercase tracking-wider text-slate-500 select-none">
+          <table className="w-full text-left text-xs text-slate-300">
+            <thead className="bg-slate-800/60 text-slate-400 text-[10px] font-bold uppercase tracking-wider border-b border-slate-800">
+              <tr>
                 <th className="py-3.5 px-4">Product</th>
-                <th className="py-3.5 px-3">Category</th>
-                <th className="py-3.5 px-3 text-right">Price</th>
-                <th className="py-3.5 px-3 text-right cursor-pointer hover:text-slate-900" onClick={() => toggleSort('stock')}>
-                  Current Stock
-                </th>
-                <th className="py-3.5 px-3 text-right">Reorder Level</th>
-                <th className="py-3.5 px-3 text-right cursor-pointer hover:text-slate-900" onClick={() => toggleSort('sales')}>
-                  Units Sold
-                </th>
-                <th className="py-3.5 px-3 text-right cursor-pointer hover:text-slate-900" onClick={() => toggleSort('revenue')}>
-                  Revenue
-                </th>
-                <th className="py-3.5 px-3 text-center">Stock Status</th>
-                <th className="py-3.5 px-3 text-center cursor-pointer hover:text-slate-900" onClick={() => toggleSort('priority')}>
-                  Priority
-                </th>
+                <th className="py-3.5 px-4">Category</th>
+                <th className="py-3.5 px-4">Price</th>
+                <th className="py-3.5 px-4">Current Stock</th>
+                <th className="py-3.5 px-4">Reorder Level</th>
+                <th className="py-3.5 px-4">Units Sold</th>
+                <th className="py-3.5 px-4">Revenue</th>
+                <th className="py-3.5 px-4">Stock Status</th>
+                <th className="py-3.5 px-4">Priority</th>
                 <th className="py-3.5 px-4 text-right">Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 text-xs">
-              {sortedProducts.length === 0 ? (
-                <tr>
-                  <td colSpan={10} className="py-12 text-center text-slate-400">
-                    <p className="text-sm font-semibold text-slate-600">No matching products found</p>
-                    <p className="text-xs text-slate-400 mt-1">Try broadening your search term or filter criteria.</p>
-                  </td>
-                </tr>
-              ) : (
-                sortedProducts.map((product) => {
-                  const priority = calculatePriority(product);
-                  const isLow = product.currentStock <= product.reorderLevel;
+            <tbody className="divide-y divide-slate-800/60">
+              {filteredProducts.map((product) => {
+                const status = calculateStockStatus(product);
+                const priority = calculatePriority(product);
+                const isCritical = status === 'critical' || status === 'out_of_stock';
+                const isLow = status === 'low';
 
-                  return (
-                    <tr
-                      key={product.id}
-                      id={`inventory-row-${product.id}`}
-                      className={`hover:bg-blue-50/50 transition-colors group cursor-pointer ${
-                        isLow ? 'bg-amber-50/20' : ''
-                      }`}
-                      onClick={() => onSelectProduct(product)}
-                    >
-                      {/* Product Name */}
-                      <td className="py-3.5 px-4 font-semibold text-slate-900">
-                        <div className="flex items-center gap-2">
-                          <span className="group-hover:text-blue-600 transition-colors">
-                            {product.name}
+                return (
+                  <tr
+                    key={product.id}
+                    id={`inventory-row-${product.id}`}
+                    className="hover:bg-slate-800/40 transition-colors group"
+                  >
+                    {/* 1. Product */}
+                    <td className="py-3.5 px-4 font-bold text-white">
+                      <div
+                        onClick={() => onSelectProduct(product)}
+                        className="hover:text-cyan-400 transition-colors cursor-pointer flex items-center gap-2"
+                      >
+                        <span>{product.name}</span>
+                        {product.restockPending && (
+                          <span className="px-1.5 py-0.2 rounded bg-cyan-950 text-cyan-300 border border-cyan-800 text-[9px] font-mono">
+                            PO Pending
                           </span>
-                          {product.restockPending && (
-                            <span className="text-[10px] font-medium bg-blue-100 text-blue-700 px-1.5 py-0.2 rounded border border-blue-200">
-                              PO Placed
-                            </span>
-                          )}
-                        </div>
-                        <div className="text-[11px] text-slate-400 font-normal">
-                          {product.supplier}
-                        </div>
-                      </td>
+                        )}
+                      </div>
+                      <span className="text-[10px] text-slate-500 font-normal">
+                        Supplier: {product.supplier}
+                      </span>
+                    </td>
 
-                      {/* Category */}
-                      <td className="py-3.5 px-3 text-slate-600 font-medium">
-                        <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-[11px]">
-                          {product.category}
+                    {/* 2. Category */}
+                    <td className="py-3.5 px-4 text-slate-300">{product.category}</td>
+
+                    {/* 3. Price */}
+                    <td className="py-3.5 px-4 font-mono text-slate-300">{formatCurrency(product.price)}</td>
+
+                    {/* 4. Current Stock */}
+                    <td className="py-3.5 px-4 font-mono font-bold">
+                      <span
+                        className={
+                          product.currentStock === 0
+                            ? 'text-rose-400'
+                            : product.currentStock <= product.reorderLevel
+                            ? 'text-amber-400'
+                            : 'text-emerald-400'
+                        }
+                      >
+                        {product.currentStock} units
+                      </span>
+                    </td>
+
+                    {/* 5. Reorder Level */}
+                    <td className="py-3.5 px-4 font-mono text-slate-400">{product.reorderLevel}</td>
+
+                    {/* 6. Units Sold */}
+                    <td className="py-3.5 px-4 font-mono font-bold text-slate-200">{product.unitsSold}</td>
+
+                    {/* 7. Revenue */}
+                    <td className="py-3.5 px-4 font-mono text-cyan-400 font-semibold">
+                      {formatCurrency(product.revenue)}
+                    </td>
+
+                    {/* 8. Stock Status */}
+                    <td className="py-3.5 px-4">
+                      {isCritical ? (
+                        <span className="px-2.5 py-1 rounded-md text-[10px] font-extrabold uppercase bg-rose-950/90 text-rose-300 border border-rose-800/80">
+                          Critical
                         </span>
-                      </td>
+                      ) : isLow ? (
+                        <span className="px-2.5 py-1 rounded-md text-[10px] font-extrabold uppercase bg-amber-950/90 text-amber-300 border border-amber-800/80">
+                          Low Stock
+                        </span>
+                      ) : status === 'overstocked' ? (
+                        <span className="px-2.5 py-1 rounded-md text-[10px] font-extrabold uppercase bg-yellow-950/90 text-yellow-300 border border-yellow-800/80">
+                          Overstocked
+                        </span>
+                      ) : (
+                        <span className="px-2.5 py-1 rounded-md text-[10px] font-extrabold uppercase bg-emerald-950/90 text-emerald-300 border border-emerald-800/80">
+                          Healthy
+                        </span>
+                      )}
+                    </td>
 
-                      {/* Price */}
-                      <td className="py-3.5 px-3 text-right font-semibold text-slate-800">
-                        {formatCurrency(product.price)}
-                      </td>
+                    {/* 9. Priority */}
+                    <td className="py-3.5 px-4">
+                      <span
+                        className={`px-2 py-0.5 rounded text-[10px] font-extrabold uppercase tracking-wider ${
+                          priority === 'urgent'
+                            ? 'bg-rose-950/80 text-rose-300 border border-rose-800/60'
+                            : priority === 'high'
+                            ? 'bg-amber-950/80 text-amber-300 border border-amber-800/60'
+                            : priority === 'medium'
+                            ? 'bg-yellow-950/80 text-yellow-300 border border-yellow-800/60'
+                            : 'bg-slate-800 text-slate-400'
+                        }`}
+                      >
+                        {priority}
+                      </span>
+                    </td>
 
-                      {/* Current Stock */}
-                      <td className="py-3.5 px-3 text-right font-bold">
-                        <span
-                          className={`${
-                            product.currentStock === 0
-                              ? 'text-rose-600 font-extrabold'
-                              : product.currentStock <= product.reorderLevel
-                              ? 'text-amber-600 font-bold'
-                              : 'text-slate-800'
-                          }`}
+                    {/* 10. Action */}
+                    <td className="py-3.5 px-4 text-right">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          onClick={() => onSelectProduct(product)}
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                          title="Inspect Product Analytics"
                         >
-                          {product.currentStock}
-                        </span>
-                      </td>
+                          <Eye className="w-4 h-4" />
+                        </button>
 
-                      {/* Reorder Level */}
-                      <td className="py-3.5 px-3 text-right text-slate-500 font-mono">
-                        {product.reorderLevel}
-                      </td>
-
-                      {/* Units Sold */}
-                      <td className="py-3.5 px-3 text-right font-semibold text-slate-800">
-                        {product.unitsSold}
-                      </td>
-
-                      {/* Revenue */}
-                      <td className="py-3.5 px-3 text-right font-bold text-slate-900">
-                        {formatCurrency(product.revenue)}
-                      </td>
-
-                      {/* Stock Status */}
-                      <td className="py-3.5 px-3 text-center">
-                        {renderStockBadge(product)}
-                      </td>
-
-                      {/* Priority */}
-                      <td className="py-3.5 px-3 text-center">
-                        {renderPriorityBadge(priority)}
-                      </td>
-
-                      {/* Action */}
-                      <td className="py-3.5 px-4 text-right" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center justify-end gap-1.5">
-                          <button
-                            id={`btn-analyze-${product.id}`}
-                            onClick={() => onSelectProduct(product)}
-                            className="p-1.5 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-blue-50 transition-colors"
-                            title="Open detailed product analysis"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </button>
-                          <button
-                            id={`btn-restock-table-${product.id}`}
-                            onClick={() => onRequestRestock(product)}
-                            className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-900 hover:bg-blue-600 text-white transition-colors flex items-center gap-1 shadow-xs cursor-pointer"
-                            title="Create Restock Request"
-                          >
-                            <ShoppingCart className="w-3 h-3" />
-                            <span>Restock</span>
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
+                        <button
+                          onClick={() => onRequestRestock(product)}
+                          className="px-2.5 py-1 rounded-lg text-xs font-bold bg-cyan-600 hover:bg-cyan-500 text-white transition-colors flex items-center gap-1 cursor-pointer shadow-xs"
+                        >
+                          <ShoppingCart className="w-3 h-3" />
+                          <span>Restock</span>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

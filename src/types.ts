@@ -4,6 +4,16 @@ export type StockStatus = 'out_of_stock' | 'critical' | 'low' | 'normal' | 'over
 
 export type PriorityLevel = 'urgent' | 'high' | 'medium' | 'low';
 
+export type ActiveSection =
+  | 'dashboard'
+  | 'overview'
+  | 'sales'
+  | 'inventory'
+  | 'products'
+  | 'restock_requests'
+  | 'copilot'
+  | 'settings';
+
 export interface Product {
   id: string;
   name: string;
@@ -44,12 +54,14 @@ export interface RestockRequest {
   id: string;
   productId: string;
   productName: string;
+  category: Category;
   currentStock: number;
   quantity: number;
   priority: PriorityLevel;
   supplier: string;
   createdAt: string;
-  status: 'Pending' | 'Approved' | 'Dispatched';
+  status: 'Pending' | 'Approved' | 'Completed';
+  estimatedCost: number;
 }
 
 export interface AlertNotification {

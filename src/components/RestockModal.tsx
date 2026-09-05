@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { X, ShoppingCart, CheckCircle2, AlertTriangle, Truck, ShieldCheck } from 'lucide-react';
-import { Product, PriorityLevel } from '../types';
+import { X, ShoppingCart, CheckCircle2, AlertTriangle, Truck, ShieldCheck, DollarSign } from 'lucide-react';
+import { Product, PriorityLevel, Category } from '../types';
 import { formatCurrency } from '../utils/analysis';
 
 interface RestockModalProps {
@@ -10,10 +10,12 @@ interface RestockModalProps {
   onSubmitRestock: (details: {
     productId: string;
     productName: string;
+    category?: Category;
     currentStock: number;
     quantity: number;
     priority: PriorityLevel;
     supplier: string;
+    estimatedCost?: number;
   }) => void;
 }
 
@@ -44,10 +46,12 @@ export const RestockModal: React.FC<RestockModalProps> = ({
     onSubmitRestock({
       productId: product.id,
       productName: product.name,
+      category: product.category,
       currentStock: product.currentStock,
       quantity,
       priority,
       supplier,
+      estimatedCost: quantity * product.price,
     });
   };
 
@@ -56,27 +60,26 @@ export const RestockModal: React.FC<RestockModalProps> = ({
   return (
     <div
       id="restock-modal-backdrop"
-      className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto animate-in fade-in"
+      className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto animate-in fade-in"
       onClick={onClose}
     >
       <div
         id="restock-modal-card"
-        className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-md w-full overflow-hidden animate-in zoom-in-95"
+        className="bg-slate-900 border border-slate-700/80 rounded-3xl shadow-2xl max-w-md w-full overflow-hidden text-slate-100 animate-in zoom-in-95"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Modal Header */}
-        <div className="p-5 bg-slate-900 text-white flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-blue-500/20 text-blue-300">
+        {/* Header */}
+        <div className="p-6 bg-slate-950/80 border-b border-slate-800 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 flex items-center justify-center">
               <ShoppingCart className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-white">Create Restock Request</h3>
-              <p className="text-xs text-slate-400">Official Purchase Order Dispatch</p>
+              <h3 className="text-base font-extrabold text-white">Create Purchase Order</h3>
+              <p className="text-xs text-slate-400">Step 5: Manager Dispatches Replenishment</p>
             </div>
           </div>
           <button
-            id="btn-close-restock-modal"
             onClick={onClose}
             className="p-1 rounded-lg text-slate-400 hover:text-white transition-colors cursor-pointer"
           >
@@ -84,124 +87,122 @@ export const RestockModal: React.FC<RestockModalProps> = ({
           </button>
         </div>
 
-        {/* Form Body (Exact requested fields: Product, Current Stock, Recommended Quantity, Priority) */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          {/* Product */}
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">
-              Product
-            </label>
-            <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between">
-              <div>
-                <span className="text-sm font-bold text-slate-900">{product.name}</span>
-                <span className="block text-xs text-slate-500">
-                  {product.category} · Unit Price: {formatCurrency(product.price)}
-                </span>
-              </div>
-              <span className="text-xs font-mono bg-slate-200 px-2 py-0.5 rounded text-slate-700">
-                {product.id}
+        {/* Form Body */}
+        <form onSubmit={handleSubmit} className="p-6 space-y-4 text-xs">
+          {/* Target Product Summary Box */}
+          <div className="p-4 rounded-2xl bg-slate-800/60 border border-slate-700/60 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="font-extrabold text-white text-sm">{product.name}</span>
+              <span className="text-[10px] font-mono text-cyan-300 bg-cyan-950 px-2 py-0.5 rounded border border-cyan-800">
+                {product.category}
               </span>
             </div>
+            <div className="flex items-center justify-between text-slate-300">
+              <span>Current In-Store:</span>
+              <strong
+                className={`font-mono ${
+                  product.currentStock <= product.reorderLevel ? 'text-rose-400' : 'text-emerald-400'
+                }`}
+              >
+                {product.currentStock} units
+              </strong>
+            </div>
+            <div className="flex items-center justify-between text-slate-400 text-[11px]">
+              <span>Reorder Baseline:</span>
+              <span className="font-mono">{product.reorderLevel} units</span>
+            </div>
           </div>
 
-          {/* Current Stock */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">
-                Current Stock
+          {/* Quantity Input */}
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="font-bold text-slate-300 uppercase tracking-wider">
+                Restock Quantity (Units)
               </label>
-              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl">
-                <span
-                  id="restock-current-stock"
-                  className={`text-base font-extrabold ${
-                    product.currentStock <= product.reorderLevel ? 'text-rose-600' : 'text-slate-800'
+              {suggestedQty && (
+                <span className="text-[10px] font-bold text-cyan-400 font-mono">
+                  ★ AI Suggested: {suggestedQty}
+                </span>
+              )}
+            </div>
+            <input
+              type="number"
+              min="1"
+              max="500"
+              required
+              value={quantity}
+              onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+              className="w-full p-2.5 bg-slate-800/80 border border-slate-700 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/30 focus:border-cyan-500 text-sm font-mono"
+            />
+          </div>
+
+          {/* Priority Selection */}
+          <div>
+            <label className="block font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+              Priority Urgency
+            </label>
+            <div className="grid grid-cols-3 gap-2">
+              {(['urgent', 'high', 'medium'] as PriorityLevel[]).map((p) => (
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => setPriority(p)}
+                  className={`py-2 px-2 rounded-xl text-xs font-bold uppercase transition-all cursor-pointer ${
+                    priority === p
+                      ? p === 'urgent'
+                        ? 'bg-rose-600 text-white shadow-md'
+                        : p === 'high'
+                        ? 'bg-amber-600 text-white shadow-md'
+                        : 'bg-cyan-600 text-white shadow-md'
+                      : 'bg-slate-800/80 text-slate-400 hover:text-white border border-slate-700'
                   }`}
                 >
-                  {product.currentStock} units
-                </span>
-                <span className="block text-[11px] text-slate-400">
-                  Reorder mark: {product.reorderLevel}
-                </span>
-              </div>
-            </div>
-
-            {/* Recommended Quantity (Editable) */}
-            <div>
-              <label htmlFor="restock-quantity-input" className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">
-                Recommended Quantity
-              </label>
-              <div className="relative">
-                <input
-                  id="restock-quantity-input"
-                  type="number"
-                  min="1"
-                  max="1000"
-                  value={quantity}
-                  onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
-                  className="w-full p-2.5 text-base font-bold bg-white border border-blue-300 rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600"
-                  required
-                />
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-slate-400">
-                  units
-                </span>
-              </div>
+                  {p}
+                </button>
+              ))}
             </div>
           </div>
 
-          {/* Priority */}
+          {/* Supplier Input */}
           <div>
-            <label htmlFor="restock-priority-select" className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">
-              Priority
+            <label className="block font-bold text-slate-300 uppercase tracking-wider mb-1">
+              Distributor / Vendor
             </label>
-            <select
-              id="restock-priority-select"
-              value={priority}
-              onChange={(e) => setPriority(e.target.value as PriorityLevel)}
-              className="w-full p-2.5 text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600"
-            >
-              <option value="urgent">🔴 Urgent (Same-day dispatch)</option>
-              <option value="high">🟠 High (Next morning delivery)</option>
-              <option value="medium">🟡 Medium (Standard 48hr cycle)</option>
-              <option value="low">🟢 Low (Routine stock top-up)</option>
-            </select>
-          </div>
-
-          {/* Supplier Info */}
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">
-              Supplier & Distributor
-            </label>
-            <div className="flex items-center gap-2 p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700">
-              <Truck className="w-4 h-4 text-slate-400 shrink-0" />
-              <span className="font-semibold">{supplier}</span>
+            <div className="relative">
+              <Truck className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                required
+                value={supplier}
+                onChange={(e) => setSupplier(e.target.value)}
+                className="w-full pl-9 pr-3 py-2 bg-slate-800/80 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-cyan-500 text-xs font-medium"
+              />
             </div>
           </div>
 
-          {/* Cost Preview */}
-          <div className="p-3 rounded-xl bg-blue-50 border border-blue-200 text-xs flex items-center justify-between">
-            <span className="text-slate-600 font-medium">Estimated PO Value:</span>
-            <span className="text-sm font-extrabold text-blue-700">
+          {/* Financial Calculation */}
+          <div className="p-3.5 rounded-2xl bg-slate-950/80 border border-slate-800 flex items-center justify-between">
+            <span className="text-slate-400">Estimated PO Value:</span>
+            <span className="text-base font-extrabold text-cyan-300 font-mono">
               {formatCurrency(estimatedTotalCost)}
             </span>
           </div>
 
-          {/* Buttons */}
-          <div className="flex items-center justify-end gap-2.5 pt-2">
+          {/* Modal Actions */}
+          <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-800">
             <button
-              id="btn-cancel-restock"
               type="button"
               onClick={onClose}
-              className="px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+              className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
             >
               Cancel
             </button>
             <button
-              id="btn-submit-restock"
               type="submit"
-              className="px-5 py-2.5 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-600/20 flex items-center gap-2 transition-all cursor-pointer"
+              className="px-5 py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white shadow-lg shadow-cyan-500/20 flex items-center gap-1.5 transition-all cursor-pointer"
             >
               <CheckCircle2 className="w-4 h-4" />
-              <span>Create Restock Request</span>
+              <span>Confirm & Dispatch PO</span>
             </button>
           </div>
         </form>

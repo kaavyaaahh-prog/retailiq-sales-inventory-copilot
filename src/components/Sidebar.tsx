@@ -1,25 +1,27 @@
 import React from 'react';
 import {
   LayoutDashboard,
-  Package,
-  BarChart3,
-  Lightbulb,
-  Sparkles,
-  Bot,
-  Store,
-  ChevronRight,
   TrendingUp,
-  AlertTriangle
+  Package,
+  Boxes,
+  ClipboardList,
+  Bot,
+  Settings,
+  Sparkles,
+  ChevronRight,
+  ShieldCheck,
+  AlertTriangle,
+  Lightbulb
 } from 'lucide-react';
 import { STORE_INFO } from '../data/mockData';
-
-export type ActiveSection = 'overview' | 'inventory' | 'sales' | 'recommendations' | 'copilot';
+import { ActiveSection } from '../types';
 
 interface SidebarProps {
   activeSection: ActiveSection;
   onSelectSection: (section: ActiveSection) => void;
   lowStockCount: number;
   urgentRecsCount: number;
+  pendingRestockCount?: number;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -27,68 +29,89 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onSelectSection,
   lowStockCount,
   urgentRecsCount,
+  pendingRestockCount = 1,
 }) => {
-  const navItems = [
+  const navItems: {
+    id: ActiveSection;
+    label: string;
+    icon: React.ComponentType<{ className?: string }>;
+    badge?: string | number | null;
+    badgeColor?: string;
+  }[] = [
     {
-      id: 'overview' as ActiveSection,
-      label: 'Overview',
+      id: 'dashboard',
+      label: 'Dashboard',
       icon: LayoutDashboard,
-      badge: null,
     },
     {
-      id: 'inventory' as ActiveSection,
+      id: 'sales',
+      label: 'Sales',
+      icon: TrendingUp,
+      badge: '+14.2%',
+      badgeColor: 'bg-emerald-950/80 text-emerald-300 border-emerald-800/60',
+    },
+    {
+      id: 'inventory',
       label: 'Inventory',
       icon: Package,
       badge: lowStockCount > 0 ? `${lowStockCount} Low` : null,
-      badgeColor: 'bg-amber-100 text-amber-800 border-amber-200',
+      badgeColor: 'bg-amber-950/80 text-amber-300 border-amber-800/60',
     },
     {
-      id: 'sales' as ActiveSection,
-      label: 'Sales Analytics',
-      icon: BarChart3,
-      badge: null,
+      id: 'products',
+      label: 'Products',
+      icon: Boxes,
     },
     {
-      id: 'recommendations' as ActiveSection,
-      label: 'Smart Recommendations',
-      icon: Lightbulb,
-      badge: urgentRecsCount > 0 ? `${urgentRecsCount} Action` : null,
-      badgeColor: 'bg-rose-100 text-rose-800 border-rose-200',
+      id: 'restock_requests',
+      label: 'Restock Requests',
+      icon: ClipboardList,
+      badge: pendingRestockCount > 0 ? `${pendingRestockCount} Pending` : null,
+      badgeColor: 'bg-cyan-950/80 text-cyan-300 border-cyan-800/60',
     },
     {
-      id: 'copilot' as ActiveSection,
+      id: 'copilot',
       label: 'AI Copilot',
       icon: Bot,
-      badge: 'AI Active',
-      badgeColor: 'bg-indigo-100 text-indigo-700 border-indigo-200',
+      badge: 'Online',
+      badgeColor: 'bg-indigo-950/80 text-cyan-300 border-cyan-800/60',
+    },
+    {
+      id: 'settings',
+      label: 'Settings',
+      icon: Settings,
     },
   ];
 
   return (
     <aside
       id="sidebar-navigation"
-      className="w-72 bg-slate-900 text-slate-200 flex flex-col shrink-0 border-r border-slate-800 select-none"
+      className="w-64 lg:w-72 bg-slate-950/90 backdrop-blur-2xl text-slate-200 flex flex-col shrink-0 border-r border-slate-800/80 select-none transition-all"
     >
       {/* Brand Header */}
-      <div className="p-5 border-b border-slate-800/80 flex items-center gap-3.5">
-        <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-cyan-400 flex items-center justify-center text-white shadow-md shadow-indigo-500/20">
-          <Store className="w-5 h-5 text-white" />
+      <div className="p-5 border-b border-slate-800/80 flex items-center gap-3">
+        <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-cyan-500 via-blue-600 to-indigo-600 p-0.5 flex items-center justify-center shadow-lg shadow-cyan-500/20">
+          <div className="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center">
+            <Sparkles className="w-5 h-5 text-cyan-400" />
+          </div>
         </div>
         <div>
-          <div className="flex items-center gap-1.5">
-            <h1 className="text-base font-bold tracking-tight text-white">RetailIQ</h1>
-            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-              COPILOT
+          <div className="flex items-center gap-2">
+            <h1 className="text-base font-extrabold tracking-tight text-white">
+              Retail<span className="text-cyan-400">IQ</span>
+            </h1>
+            <span className="px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-cyan-950/80 text-cyan-300 border border-cyan-800/60 tracking-wider">
+              AI COPILOT
             </span>
           </div>
-          <p className="text-xs text-slate-400 font-medium">Sales & Inventory Intelligence</p>
+          <p className="text-[11px] text-slate-400 font-medium">Sales & Inventory Intelligence</p>
         </div>
       </div>
 
-      {/* Navigation List */}
-      <div className="flex-1 py-5 px-3 space-y-1.5 overflow-y-auto">
-        <div className="px-3 pb-2 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-          Operations
+      {/* Main Navigation List */}
+      <div className="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
+        <div className="px-3 pb-2 text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+          Main Navigation
         </div>
         {navItems.map((item) => {
           const Icon = item.icon;
@@ -98,24 +121,24 @@ export const Sidebar: React.FC<SidebarProps> = ({
               key={item.id}
               id={`nav-item-${item.id}`}
               onClick={() => onSelectSection(item.id)}
-              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
+              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 group cursor-pointer ${
                 isActive
-                  ? 'bg-blue-600 text-white shadow-sm shadow-blue-600/30 font-semibold'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+                  ? 'bg-gradient-to-r from-cyan-500/20 to-blue-600/20 text-white border border-cyan-500/40 shadow-md shadow-cyan-500/10'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-900/80 border border-transparent'
               }`}
             >
               <div className="flex items-center gap-3">
                 <Icon
-                  className={`w-4 h-4 ${
-                    isActive ? 'text-white' : 'text-slate-400 group-hover:text-white'
+                  className={`w-4 h-4 transition-colors ${
+                    isActive ? 'text-cyan-400' : 'text-slate-400 group-hover:text-cyan-400'
                   }`}
                 />
-                <span>{item.label}</span>
+                <span className="tracking-wide">{item.label}</span>
               </div>
               {item.badge && (
                 <span
-                  className={`text-[11px] px-2 py-0.5 rounded-full font-semibold border ${
-                    isActive ? 'bg-white/20 text-white border-white/20' : item.badgeColor
+                  className={`text-[10px] px-2 py-0.5 rounded-full font-bold border ${
+                    isActive ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40' : item.badgeColor
                   }`}
                 >
                   {item.badge}
@@ -126,37 +149,38 @@ export const Sidebar: React.FC<SidebarProps> = ({
         })}
       </div>
 
-      {/* Quick Copilot Callout Card */}
-      <div className="p-3.5 m-3 rounded-xl bg-slate-800/80 border border-slate-700/60">
+      {/* AI Decision Copilot Card */}
+      <div className="p-3.5 m-3 rounded-2xl bg-gradient-to-br from-slate-900 via-slate-900 to-indigo-950/60 border border-slate-800/80 shadow-lg relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-24 h-24 bg-cyan-500/5 rounded-full blur-xl pointer-events-none"></div>
         <div className="flex items-center gap-2 mb-2">
-          <div className="p-1 rounded-md bg-indigo-500/20 text-indigo-400">
-            <Sparkles className="w-3.5 h-3.5" />
+          <div className="p-1.5 rounded-lg bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">
+            <Bot className="w-3.5 h-3.5" />
           </div>
-          <span className="text-xs font-semibold text-slate-200">Decision Copilot</span>
+          <span className="text-xs font-bold text-white tracking-tight">Copilot Live Engine</span>
         </div>
-        <p className="text-[12px] text-slate-400 leading-relaxed mb-3">
-          Daily business decision engine running on store run-rates and inventory buffers.
+        <p className="text-[11px] text-slate-400 leading-relaxed mb-3">
+          Auto-evaluates inventory risk, velocity spikes, and supplier restock buffers.
         </p>
         <button
           id="btn-sidebar-ask-copilot"
           onClick={() => onSelectSection('copilot')}
-          className="w-full py-1.5 px-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium flex items-center justify-center gap-1.5 transition-colors shadow-sm"
+          className="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-all shadow-md shadow-cyan-500/20 cursor-pointer"
         >
-          <span>Ask Copilot Today</span>
+          <span>Open AI Copilot</span>
           <ChevronRight className="w-3.5 h-3.5" />
         </button>
       </div>
 
-      {/* Store Location Footer */}
-      <div className="p-3.5 border-t border-slate-800/80 bg-slate-900/50 flex items-center justify-between">
+      {/* Store Sync Footer */}
+      <div className="p-3.5 border-t border-slate-800/80 bg-slate-950/60 flex items-center justify-between">
         <div className="min-w-0">
-          <p className="text-xs font-semibold text-slate-200 truncate">{STORE_INFO.branch}</p>
+          <p className="text-xs font-bold text-white truncate">{STORE_INFO.branch}</p>
           <div className="flex items-center gap-1.5 mt-0.5">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span className="text-[11px] text-emerald-400 font-medium">POS Live Sync</span>
+            <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-xs shadow-emerald-500 animate-pulse"></span>
+            <span className="text-[10px] text-emerald-400 font-semibold">POS Engine Synced</span>
           </div>
         </div>
-        <span className="text-[10px] text-slate-400 font-mono bg-slate-800 px-1.5 py-0.5 rounded border border-slate-700">
+        <span className="text-[10px] text-slate-400 font-mono bg-slate-900 px-2 py-0.5 rounded-lg border border-slate-800">
           {STORE_INFO.storeId}
         </span>
       </div>

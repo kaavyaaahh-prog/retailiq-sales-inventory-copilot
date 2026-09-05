@@ -1,4 +1,4 @@
-import { Product, DailySalesRecord, AlertNotification } from '../types';
+import { Product, DailySalesRecord, AlertNotification, RestockRequest } from '../types';
 
 export const INITIAL_PRODUCTS: Product[] = [
   // 1. Core sample products from user specification
@@ -66,6 +66,21 @@ export const INITIAL_PRODUCTS: Product[] = [
     salesVelocityPerDay: 3,
     supplier: 'Hindustan Consumer Corp',
     lastRestockedDate: '2026-08-10',
+  },
+
+  // Highlighted high-growth item for AI Insights demo
+  {
+    id: 'p-25',
+    name: 'Whole Wheat Bread 400g',
+    category: 'Snacks',
+    price: 45,
+    currentStock: 12,
+    reorderLevel: 25,
+    unitsSold: 88,
+    revenue: 3960,
+    salesVelocityPerDay: 15,
+    supplier: 'Modern Bakeries Ltd',
+    lastRestockedDate: '2026-09-03',
   },
 
   // Out of stock products (4 out of stock to match KPI)
@@ -323,13 +338,13 @@ export const INITIAL_PRODUCTS: Product[] = [
 ];
 
 export const SALES_TREND_DAYS: DailySalesRecord[] = [
-  { day: 'Monday', revenue: 14200, units: 280, orders: 132 },
-  { day: 'Tuesday', revenue: 13800, units: 270, orders: 125 },
-  { day: 'Wednesday', revenue: 15900, units: 310, orders: 148 },
-  { day: 'Thursday', revenue: 16400, units: 325, orders: 155 },
-  { day: 'Friday', revenue: 21200, units: 420, orders: 198 },
-  { day: 'Saturday', revenue: 23800, units: 465, orders: 220 },
-  { day: 'Sunday', revenue: 19200, units: 380, orders: 182 },
+  { day: 'Mon', revenue: 14200, units: 280, orders: 132 },
+  { day: 'Tue', revenue: 13800, units: 270, orders: 125 },
+  { day: 'Wed', revenue: 15900, units: 310, orders: 148 },
+  { day: 'Thu', revenue: 16400, units: 325, orders: 155 },
+  { day: 'Fri', revenue: 21200, units: 420, orders: 198 },
+  { day: 'Sat', revenue: 23800, units: 465, orders: 220 },
+  { day: 'Sun', revenue: 19200, units: 380, orders: 182 },
 ];
 
 export const INITIAL_ALERTS: AlertNotification[] = [
@@ -371,6 +386,61 @@ export const INITIAL_ALERTS: AlertNotification[] = [
   },
 ];
 
+export const INITIAL_RESTOCK_REQUESTS: RestockRequest[] = [
+  {
+    id: 'PO-8821',
+    productId: 'p-7',
+    productName: 'Basmati Rice Premium 5kg',
+    category: 'Grocery',
+    currentStock: 0,
+    quantity: 40,
+    priority: 'urgent',
+    supplier: 'India Gate Grain Mills',
+    createdAt: 'Today, 09:15 AM',
+    status: 'Pending',
+    estimatedCost: 13600,
+  },
+  {
+    id: 'PO-8819',
+    productId: 'p-6',
+    productName: 'Greek Yogurt 400g',
+    category: 'Dairy',
+    currentStock: 0,
+    quantity: 50,
+    priority: 'high',
+    supplier: 'Amul Dairy Cooperative',
+    createdAt: 'Yesterday, 04:30 PM',
+    status: 'Approved',
+    estimatedCost: 4500,
+  },
+  {
+    id: 'PO-8815',
+    productId: 'p-10',
+    productName: 'Wheat Flour / Atta 10kg',
+    category: 'Grocery',
+    currentStock: 4,
+    quantity: 30,
+    priority: 'medium',
+    supplier: 'Aashirvaad Mills',
+    createdAt: '03 Sep, 11:20 AM',
+    status: 'Completed',
+    estimatedCost: 11400,
+  },
+  {
+    id: 'PO-8809',
+    productId: 'p-22',
+    productName: 'Butter Pasteurized 500g',
+    category: 'Dairy',
+    currentStock: 22,
+    quantity: 35,
+    priority: 'low',
+    supplier: 'Amul Dairy Cooperative',
+    createdAt: '02 Sep, 02:45 PM',
+    status: 'Completed',
+    estimatedCost: 9100,
+  },
+];
+
 export const STORE_INFO = {
   name: 'RetailIQ Supermarket',
   branch: 'Indiranagar Central Branch',
@@ -382,10 +452,9 @@ export const STORE_INFO = {
     shift: 'Morning (08:00 - 17:00)',
   },
   kpis: {
-    totalRevenue: '₹1,24,500',
-    totalRevenueNum: 124500,
+    todayRevenue: '₹1,24,500',
+    totalSales: '₹1,04,500',
     unitsSold: '2,450',
-    unitsSoldNum: 2450,
     lowStockItems: 12,
     outOfStockItems: 4,
     averageOrderValue: '₹534',

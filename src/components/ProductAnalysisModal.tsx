@@ -10,7 +10,8 @@ import {
   Calendar,
   Sparkles,
   ArrowRight,
-  ShieldAlert
+  ShieldAlert,
+  ShoppingCart
 } from 'lucide-react';
 import { Product } from '../types';
 import { analyzeProduct, formatCurrency } from '../utils/analysis';
@@ -18,7 +19,7 @@ import { analyzeProduct, formatCurrency } from '../utils/analysis';
 interface ProductAnalysisModalProps {
   product: Product | null;
   onClose: () => void;
-  onCreateRestockRequest: (product: Product) => void;
+  onCreateRestockRequest: (product: Product, suggestedQty?: number) => void;
 }
 
 export const ProductAnalysisModal: React.FC<ProductAnalysisModalProps> = ({
@@ -34,230 +35,144 @@ export const ProductAnalysisModal: React.FC<ProductAnalysisModalProps> = ({
     switch (health) {
       case 'CRITICAL':
       case 'OUT OF STOCK':
-        return 'bg-rose-100 text-rose-800 border-rose-300';
+        return 'bg-rose-950/80 text-rose-300 border-rose-800/80';
       case 'LOW':
-        return 'bg-amber-100 text-amber-800 border-amber-300';
+        return 'bg-amber-950/80 text-amber-300 border-amber-800/80';
       case 'OVERSTOCK':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-300';
+        return 'bg-yellow-950/80 text-yellow-300 border-yellow-800/80';
       case 'HEALTHY':
       default:
-        return 'bg-emerald-100 text-emerald-800 border-emerald-300';
+        return 'bg-emerald-950/80 text-emerald-300 border-emerald-800/80';
     }
   };
 
   const getDemandBadge = (demand: typeof analysis.salesPerformance) => {
     switch (demand) {
       case 'HIGH DEMAND':
-        return 'bg-blue-100 text-blue-800 border-blue-300';
+        return 'bg-cyan-950/80 text-cyan-300 border-cyan-800/80';
       case 'STEADY':
-        return 'bg-indigo-100 text-indigo-800 border-indigo-300';
+        return 'bg-blue-950/80 text-blue-300 border-blue-800/80';
       case 'MODERATE':
-        return 'bg-slate-100 text-slate-800 border-slate-300';
+        return 'bg-slate-800 text-slate-300 border-slate-700';
       case 'SLOW MOVING':
       default:
-        return 'bg-amber-100 text-amber-800 border-amber-300';
-    }
-  };
-
-  const getPriorityBadge = (priority: typeof analysis.restockPriority) => {
-    switch (priority) {
-      case 'URGENT':
-        return 'bg-rose-600 text-white shadow-xs';
-      case 'HIGH':
-        return 'bg-amber-500 text-white';
-      case 'MEDIUM':
-        return 'bg-slate-300 text-slate-800';
-      case 'MONITOR':
-        return 'bg-yellow-500 text-white';
-      case 'LOW':
-      default:
-        return 'bg-emerald-600 text-white';
+        return 'bg-amber-950/80 text-amber-300 border-amber-800/80';
     }
   };
 
   return (
     <div
-      id="product-analysis-backdrop"
-      className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto animate-in fade-in"
+      id="product-analysis-modal-backdrop"
+      className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto animate-in fade-in"
       onClick={onClose}
     >
       <div
-        id="product-analysis-modal"
-        className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-2xl w-full overflow-hidden animate-in zoom-in-95"
+        id="product-analysis-modal-card"
+        className="bg-slate-900 border border-slate-700/80 rounded-3xl shadow-2xl max-w-xl w-full overflow-hidden text-slate-100 animate-in zoom-in-95"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="p-6 bg-gradient-to-r from-slate-900 to-slate-800 text-white flex items-start justify-between">
+        <div className="p-6 bg-slate-950/80 border-b border-slate-800 flex items-start justify-between">
           <div>
-            <div className="flex items-center gap-2">
-              <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-blue-500/20 text-blue-300 border border-blue-400/30">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-cyan-400">
                 {product.category}
               </span>
-              <span className="text-xs text-slate-400">ID: {product.id}</span>
+              <span className="text-slate-600">·</span>
+              <span className="text-[10px] font-mono text-slate-400">ID: {product.id}</span>
             </div>
-            <h2 className="text-2xl font-black uppercase tracking-tight text-white mt-1">
-              {product.name}
-            </h2>
-            <p className="text-xs text-slate-300 mt-0.5">
-              Automated Inventory Health & Velocity Diagnostic
-            </p>
+            <h2 className="text-xl font-extrabold text-white">{product.name}</h2>
           </div>
           <button
-            id="btn-close-analysis-modal"
             onClick={onClose}
-            className="p-1.5 rounded-full text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+            className="p-1 rounded-lg text-slate-400 hover:text-white transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Content Body */}
-        <div className="p-6 space-y-6">
-          {/* Key Metric Blocks */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3.5">
-            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
-              <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
-                Price
-              </span>
-              <div className="text-lg font-bold text-slate-900 mt-1">
-                {formatCurrency(product.price)}
-              </div>
-            </div>
+        {/* Content */}
+        <div className="p-6 space-y-5 text-xs">
+          {/* Badges Bar */}
+          <div className="flex flex-wrap items-center gap-2">
+            <span
+              className={`px-3 py-1 rounded-lg text-xs font-bold border ${getHealthBadge(
+                analysis.stockHealth
+              )}`}
+            >
+              Stock Status: {analysis.stockHealth}
+            </span>
+            <span
+              className={`px-3 py-1 rounded-lg text-xs font-bold border ${getDemandBadge(
+                analysis.salesPerformance
+              )}`}
+            >
+              Velocity: {analysis.salesPerformance}
+            </span>
+            <span className="px-3 py-1 rounded-lg text-xs font-bold bg-slate-800 text-slate-300 border border-slate-700 font-mono">
+              Priority: {analysis.restockPriority}
+            </span>
+          </div>
 
-            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
-              <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
-                Current Inventory
-              </span>
-              <div
-                className={`text-lg font-bold mt-1 ${
-                  product.currentStock <= product.reorderLevel ? 'text-rose-600' : 'text-slate-900'
-                }`}
-              >
-                {product.currentStock} units
-              </div>
+          {/* Metrics Grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="p-3 rounded-2xl bg-slate-800/60 border border-slate-700/60">
+              <span className="text-[10px] font-bold uppercase text-slate-400 block mb-1">Current Stock</span>
+              <span className="text-base font-extrabold text-white font-mono">{product.currentStock} units</span>
             </div>
-
-            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
-              <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
-                Reorder Level
-              </span>
-              <div className="text-lg font-bold text-slate-700 mt-1 font-mono">
-                {product.reorderLevel} units
-              </div>
+            <div className="p-3 rounded-2xl bg-slate-800/60 border border-slate-700/60">
+              <span className="text-[10px] font-bold uppercase text-slate-400 block mb-1">Reorder Mark</span>
+              <span className="text-base font-extrabold text-slate-300 font-mono">{product.reorderLevel} units</span>
             </div>
-
-            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
-              <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
-                Units Sold
-              </span>
-              <div className="text-lg font-bold text-indigo-700 mt-1">
-                {product.unitsSold} units
-              </div>
+            <div className="p-3 rounded-2xl bg-slate-800/60 border border-slate-700/60">
+              <span className="text-[10px] font-bold uppercase text-slate-400 block mb-1">Units Sold</span>
+              <span className="text-base font-extrabold text-cyan-300 font-mono">{product.unitsSold} units</span>
             </div>
-
-            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
-              <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
-                Total Revenue
-              </span>
-              <div className="text-lg font-bold text-emerald-700 mt-1">
-                {formatCurrency(product.revenue)}
-              </div>
-            </div>
-
-            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
-              <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
-                Run-Rate Buffer
-              </span>
-              <div className="text-lg font-bold text-slate-800 mt-1">
-                ~{analysis.daysOfInventoryLeft} days left
-              </div>
+            <div className="p-3 rounded-2xl bg-slate-800/60 border border-slate-700/60">
+              <span className="text-[10px] font-bold uppercase text-slate-400 block mb-1">Sales Revenue</span>
+              <span className="text-base font-extrabold text-emerald-400 font-mono">{formatCurrency(product.revenue)}</span>
             </div>
           </div>
 
-          {/* Core Calculations Section */}
-          <div className="p-4 rounded-2xl bg-slate-50/80 border border-slate-200 space-y-3">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
-              Algorithmic Diagnostic
-            </h3>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {/* Stock Health */}
-              <div className="bg-white p-3.5 rounded-xl border border-slate-200 flex flex-col justify-between">
-                <span className="text-[11px] text-slate-500 font-medium">Stock Health</span>
-                <span
-                  id="diag-stock-health"
-                  className={`mt-2 inline-flex items-center justify-center px-2.5 py-1 rounded-md text-xs font-black tracking-wide border ${getHealthBadge(
-                    analysis.stockHealth
-                  )}`}
-                >
-                  {analysis.stockHealth}
-                </span>
-              </div>
-
-              {/* Sales Performance */}
-              <div className="bg-white p-3.5 rounded-xl border border-slate-200 flex flex-col justify-between">
-                <span className="text-[11px] text-slate-500 font-medium">Sales Performance</span>
-                <span
-                  id="diag-sales-performance"
-                  className={`mt-2 inline-flex items-center justify-center px-2.5 py-1 rounded-md text-xs font-black tracking-wide border ${getDemandBadge(
-                    analysis.salesPerformance
-                  )}`}
-                >
-                  {analysis.salesPerformance}
-                </span>
-              </div>
-
-              {/* Restock Priority */}
-              <div className="bg-white p-3.5 rounded-xl border border-slate-200 flex flex-col justify-between">
-                <span className="text-[11px] text-slate-500 font-medium">Restock Priority</span>
-                <span
-                  id="diag-restock-priority"
-                  className={`mt-2 inline-flex items-center justify-center px-2.5 py-1 rounded-md text-xs font-black tracking-wide ${getPriorityBadge(
-                    analysis.restockPriority
-                  )}`}
-                >
-                  {analysis.restockPriority}
-                </span>
-              </div>
+          {/* AI Diagnosis */}
+          <div className="p-4 rounded-2xl bg-slate-950/60 border border-cyan-500/20 space-y-2">
+            <div className="flex items-center gap-2 text-cyan-400 font-bold">
+              <Sparkles className="w-4 h-4" />
+              <span>AI Inventory Assessment</span>
             </div>
-          </div>
-
-          {/* AI Recommendation Box */}
-          <div className="p-4 rounded-2xl bg-blue-50/80 border border-blue-200 text-slate-900 space-y-2">
-            <div className="flex items-center gap-2 text-blue-900 font-bold text-xs uppercase tracking-wider">
-              <Sparkles className="w-4 h-4 text-blue-600" />
-              <span>Copilot Recommendation</span>
-            </div>
-            <p id="analysis-recommendation-text" className="text-sm font-semibold text-slate-800 leading-relaxed">
-              "{analysis.recommendation}"
+            <p className="text-slate-300 leading-relaxed">
+              {analysis.recommendation}
             </p>
-            <div className="text-xs text-blue-700 pt-1 flex items-center gap-2">
-              <span>Primary Supplier: <strong>{product.supplier}</strong></span>
-              <span>·</span>
-              <span>Suggested Order Qty: <strong>{analysis.recommendedOrderQty} units</strong></span>
-            </div>
           </div>
 
-          {/* Restock Action Button */}
-          <div className="flex items-center justify-end gap-3 pt-2">
-            <button
-              id="btn-cancel-analysis"
-              onClick={onClose}
-              className="px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
-            >
-              Close
-            </button>
-            <button
-              id="btn-create-restock-request"
-              onClick={() => {
-                onCreateRestockRequest(product);
-              }}
-              className="px-5 py-2.5 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-600/20 flex items-center gap-2 transition-all cursor-pointer"
-            >
-              <Package className="w-4 h-4" />
-              <span>Create Restock Request</span>
-            </button>
+          {/* Supplier Info */}
+          <div className="p-3.5 rounded-2xl bg-slate-800/40 border border-slate-800 flex items-center justify-between text-slate-300">
+            <div className="flex items-center gap-2">
+              <Truck className="w-4 h-4 text-slate-400" />
+              <span>Distributor: <strong className="text-white">{product.supplier}</strong></span>
+            </div>
+            <span className="text-slate-400 font-mono">Last restock: {product.lastRestockedDate}</span>
           </div>
+        </div>
+
+        {/* Footer Actions */}
+        <div className="p-5 bg-slate-950/80 border-t border-slate-800 flex items-center justify-between">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white transition-colors cursor-pointer"
+          >
+            Close
+          </button>
+          <button
+            onClick={() => {
+              onClose();
+              onCreateRestockRequest(product, analysis.recommendedOrderQty);
+            }}
+            className="px-5 py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white shadow-lg shadow-cyan-500/20 flex items-center gap-2 transition-all cursor-pointer"
+          >
+            <ShoppingCart className="w-4 h-4" />
+            <span>Create Restock ({analysis.recommendedOrderQty} units)</span>
+          </button>
         </div>
       </div>
     </div>
